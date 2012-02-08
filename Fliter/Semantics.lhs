@@ -47,6 +47,7 @@
 >   , stack :: Stack t }
 >   deriving Show
 >   
+> initState :: Num a => State a
 > initState = S Map.empty (0 :> Fun 0 []) []
 > 
 > -- Small-step semantics
@@ -195,3 +196,7 @@
 > deTagSt (S h fcs stk) = S (deTagH h) 
 >                           (deTag fcs) 
 >                           (map deTagSE stk)
+
+> freeVarsSt :: State t -> [HP]
+> freeVarsSt = Map.keys . Map.filter isNothing . heap
+

@@ -166,3 +166,14 @@
 > 
 > exTag :: Ord a => Expr a b -> Map a Int
 > exTag x = foldr (flip (Map.insertWith (+)) 0) Map.empty $ execWriter (reTag (\t -> tell (t:)) x) []
+
+> funRefs :: Expr () a -> Set Ix
+> funRefs = fr . getRhs
+>   where fr (Fun f _) = Set.singleton f
+>         fr x = extract fr x
+
+> unsafeEraseExpr :: Expr t a -> Expr t b
+> unsafeEraseExpr = fmap (fmap (error "There should have been no free variables"))
+
+> unsafeEraseProg :: Prog t a -> Prog t b
+> unsafeEraseProg = fmap (error "There should have been no free variables")

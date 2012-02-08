@@ -8,24 +8,24 @@ better. Currently packaged as a library and as is.
 Try;
 <pre>
 $ ghci Supercompiler
-λ> example'
-
-f0 x = let y = f2
+λ> ex_mapmap
+f0  = let x = Nil
+      in f1 x
+f1 x = let y = f3
        in
-          let z = f1 y x
-          in f1 y z
-f1 x y = case y of
+          let z = f2 y x
+          in f2 y z
+f2 x y = case y of
            Nil  -> Nil
            Cons z p -> let
                            q = x z
-                           r = f1 x p
+                           r = f2 x p
                        in Cons q r
-f2 x = let y = 1
+f3 x = let y = 1
        in x + y
-
-λ> sc example' (lam "xs" $ fun 0 @: "xs") 0
+λ> sc ex_mapmap (lam "xs" $ fun 1 @: "xs") 1
 ...
 </pre>
 
-It will supercompiler the function `f0` of program `example'` with an
+It will supercompiler the function `f0` of program `ex_mapmap` with an
 unknown input. 
