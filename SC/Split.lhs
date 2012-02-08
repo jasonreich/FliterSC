@@ -1,18 +1,17 @@
+FliterSC: Splitter
+==================
+
 > {-# LANGUAGE TupleSections, ParallelListComp #-}
 > module SC.Split where
 > 
-> import Control.Applicative
+> import Control.Arrow (first)
 > import Control.Monad
 > import qualified Data.Map as Map
-> import Data.Maybe
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > 
 > import Fliter.Semantics
 > import Fliter.Syntax
-> import SC.Rebuild
-> 
-> import Debug.Trace
 > 
 > data Bracket t = B { holes   :: [State t]
 >                    , context :: [Expr () HP] -> Expr () HP }
@@ -21,6 +20,26 @@
 >   show (B hls ctx) = "B\n" ++ unlines (map show hls) ++
 >                      show (ctx [ undefined :> Con ("<" ++ show i ++ ">") []
 >                                | i <- [0..]])
+>
+> splitFree :: [HP] -> [(HP, Expr () HP)] -> ([(HP, Expr () HP)], [(HP, Expr () HP)])
+> splitFree vs [] = ([], [])
+> splitFree vs ((v,x):xs) 
+>   | any (`Set.member` freeVars x) vs = ([], (v,x):xs)
+>   | otherwise = first ((v,x):) $ splitFree (v:vs) xs
+> 
+> mkLet [] y = y
+> mkLet xs y = () :> Let xs y
+> 
+> rebuildHeap :: Heap () -> Expr () HP -> Expr () HP
+> rebuildHeap h fcs = rb [ (v, x) | (v, Just x) <- Map.toAscList h 
+>                                 , v `Set.member` acc ] [] fcs
+>   where acc = accessible h fcs
+>         rb :: [(HP, Expr () HP)] -> [HP] -> Expr () HP -> Expr () HP
+>         rb [] rho y = abstract' rho y
+>         rb h  rho y = mkLet (map (abstract' rho) ls) (rb xs (vs ++ rho) y)
+>           where (bs, xs) = splitFree [] h
+>                 free = Set.unions $ map freeVars (y:map snd xs)
+>                 (vs, ls) = unzip $ filter ((`Set.member` free) . fst) bs
 > 
 > splitApp :: State t -> Bracket t
 > splitApp s = case focus s of
@@ -39,7 +58,8 @@
 > 
 > splitStack :: [HP] -> State t -> Bracket t
 > splitStack vs s = case stack s of
->   []              -> B [] $ \_ -> (rebuildStack . deTagSt) s
+>   []              -> B [] $ \_ -> rebuildHeap (heap s') (focus s')
+>     where s' = deTagSt s
 >   (Upd v  : stk)  -> splitStack (v:vs) $ s { stack = stk }
 >   -- Drive on the vs too
 >   (App vs : stk)  -> badSplitApp vs (heap s) $ splitStack []
