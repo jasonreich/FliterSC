@@ -6,7 +6,7 @@ for the F-liter language in an attempt to understand it
 better. Currently packaged as a library and as is. 
 
 Try;
-```
+<pre>
 $ ghci Supercompiler
 λ> example'
 
@@ -25,7 +25,7 @@ f2 x = let y = 1
 
 λ> sc example' (lam "xs" $ fun 0 @: "xs") 0
 ...
-```
+</pre>
 
 It will supercompiler the function `f0` of program `example'` with an
 unknown input. 
