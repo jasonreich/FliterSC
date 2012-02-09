@@ -196,7 +196,7 @@ Otherwise, return a pointer to it.
 
 > tie :: Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > tie p s = do
->   let B hls ctx = splitApp s
+>   let B hls ctx = split s
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ freeVarsSt s
 >   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p . gc) hls
