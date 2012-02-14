@@ -197,7 +197,7 @@ Otherwise, return a pointer to it.
 > tie p s = do
 >   let br@(B hls ctx) = split s
 >   i <- fmap scThisPromise get
->   fvs <- scPerhapsFreevars i $ freeVarsSt s
+>   fvs <- scPerhapsFreevars i $ unknownVarsSt s
 >   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p . gc) hls
 >   let defn = Lam (length fvs) (open fvs rhs)
 >   scpSt <- get

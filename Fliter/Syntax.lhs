@@ -233,6 +233,14 @@ The set of references to functions.
 >   where fr (Fun f _) = Set.singleton f
 >         fr x = extract fr x
 
+Assume the expression is closed when changing type.
+
+> unsafeEraseExpr :: Expr t a -> Expr t b
+> unsafeEraseExpr = fmap (fmap (error "Expecting no free variables!"))
+
+> unsafeEraseProg :: Prog t a -> Prog t b
+> unsafeEraseProg = fmap (error "Expecting no free variables!")
+
 Tag utilities
 -------------
 
@@ -283,11 +291,3 @@ Extract a dictionary counting each tag.
 > exTag :: Ord a => Expr a b -> Map a Int
 > exTag x = foldr (flip (Map.insertWith (+)) 0) Map.empty 
 >           $ execWriter (reTag (\t -> tell (t:)) x) []
-
-Assume the expression is closed when changing type.
-
-> unsafeEraseExpr :: Expr t a -> Expr t b
-> unsafeEraseExpr = fmap (fmap (error "Expecting no free variables!"))
-
-> unsafeEraseProg :: Prog t a -> Prog t b
-> unsafeEraseProg = fmap (error "Expecting no free variables!")
