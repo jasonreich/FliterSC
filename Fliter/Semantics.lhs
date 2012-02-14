@@ -79,7 +79,7 @@
 >     Lam novs x <- toExec $ fs !! f
 >     if novs <= len_vs
 >       then let (args, apps) = splitAt novs vs
->            in  return $ s { focus = instantiate' args x
+>            in  return $ s { focus = close args x
 >                           , stack = addApps apps (stack s) }
 >       else stepWHNF s
 >   Con _ _     -> stepWHNF s
@@ -97,7 +97,7 @@
 >     let len_xs = length xs 
 >     let bs = zip (nextHPs $ nextKey $ heap s) xs
 >     let heap' = inserts (heap s) $ map (second Just) bs
->     let y' = instantiate' (map fst bs) y
+>     let y' = close (map fst bs) y
 >     return $ S heap' y' (stack s)
 >   Case x as   -> do
 >     return $ s { focus = x, stack = Cas as : stack s }
@@ -122,7 +122,7 @@
 >   (Cas as : stk, _ :> Con c vs) -> do
 >     y <- toExec $ listToMaybe [ y | ((c', novs) :-> y) <- as
 >                                   , c == c', novs == length vs ]
->     return $ s { focus = instantiate' vs y, stack = stk }
+>     return $ s { focus = close vs y, stack = stk }
 >   (PrL o w : stk, _ :> PVa m) -> do
 >     fcs <- toExec $ join $ Map.lookup w (heap s)
 >     return $ s { focus = fcs, stack = Upd w : PrR o m : stk }

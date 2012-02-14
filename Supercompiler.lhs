@@ -121,7 +121,7 @@ The supercompiler process;
 >         Prog fs = deTagProg $ unsafeEraseProg $ p
 >         vs = map HP [0 .. novs - 1]
 >         s0 = S (Map.fromList [ (v, Nothing) | v <- vs ])
->                (instantiate' vs $ unsafeEraseExpr $ intTag x) []
+>                (close vs $ unsafeEraseExpr $ intTag x) []
 >         scp = execState (drive [] p0 s0) 
 >               (initScp { scThisPromise = f0 })
 >         p' = Prog (take f0 fs ++ Map.elems (scDefinition scp))
@@ -199,7 +199,7 @@ Otherwise, return a pointer to it.
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ freeVarsSt s
 >   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p . gc) hls
->   let defn = Lam (length fvs) (abstract' fvs rhs)
+>   let defn = Lam (length fvs) (open fvs rhs)
 >   scpSt <- get
 >   put $ scpSt { scDefinition = Map.insert i defn (scDefinition scpSt) }
 >   return $ if i `Set.member` funRefs rhs

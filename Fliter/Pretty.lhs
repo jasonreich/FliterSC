@@ -34,7 +34,7 @@
 > prettyExpr fresh (Let xs y)  =  hang (text "let") 4 (vcat [ hsep [ text v, text "="
 >                                                                  , (prettyExpr fresh . getRhs) x]
 >                                                             | (v, x) <- bs])
->                                $$ hang (text "in")  3 ((prettyExpr fresh' . getRhs) $ instantiate' vs y)
+>                                $$ hang (text "in")  3 ((prettyExpr fresh' . getRhs) $ close vs y)
 >   where (bs, fresh') = zipDrop fresh xs
 >         vs = map fst bs
 > prettyExpr fresh (Case x as)   =  hang (text "case") 5  ((prettyExpr fresh . getRhs) x) <+> text "of"
@@ -43,17 +43,17 @@
 > prettyAlte :: [String] -> Alte t String -> Doc
 > prettyAlte fresh ((c, novs) :-> y)
 >   = text c <+> text (unwords vs) <+> text "->" <+>
->     (prettyExpr fresh' . getRhs $ instantiate' vs y)
+>     (prettyExpr fresh' . getRhs $ close vs y)
 >   where (vs, fresh') = splitAt novs fresh
 >                                
 > prettyFunc :: Func t String -> Doc
 > prettyFunc (Lam novs x) = text "\\" <+> text (unwords vs) <+> text "->" <+>
->                           (prettyExpr fresh . getRhs) (instantiate' vs x)
+>                           (prettyExpr fresh . getRhs) (close vs x)
 >   where (vs, fresh) = splitAt novs varSupply
 >         
 > prettyProg :: Prog t String -> Doc
 > prettyProg (Prog p) = vcat [ text ('f' : show i) <+> text (unwords vs) <+> text "=" <+>
->                              (prettyExpr fresh . getRhs) (instantiate' vs x)
+>                              (prettyExpr fresh . getRhs) (close vs x)
 >                            | Lam novs x <- p
 >                            , let (vs, fresh) = splitAt novs varSupply 
 >                            | i <- [0..] ]

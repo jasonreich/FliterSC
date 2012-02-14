@@ -52,7 +52,7 @@ Compress lets where the new binding is not free in the others.
 >   = () :> Let (xs ++ [x]) (fmap (abstract rho) y)
 >   where rho v' | v == v'   = Bnd $ length xs
 >                | otherwise = Fre v'
-> mkLet (v, x) y = () :> Let [x] (abstract' [v] y)
+> mkLet (v, x) y = () :> Let [x] (open [v] y)
 
 > wipe :: HP -> State t -> State t
 > wipe v s = s { heap = Map.insert v Nothing (heap s) }
@@ -125,7 +125,7 @@ On a case frame, split down case alternatives.
 >   = (apps, B hls' ctx')
 >   where (apps, B hls ctx) = splitStack [] [] x h
 >         nxthps = (nextHPs . nextKey) h
->         s_as = [ gc $ S h' (instantiate' vs y) stk
+>         s_as = [ gc $ S h' (close vs y) stk
 >                | ((c, novs) :-> y) <- as
 >                , let vs = take novs nxthps
 >                , let x' = getTag y :> Con c vs
@@ -134,7 +134,7 @@ On a case frame, split down case alternatives.
 >         hls' = hls ++ s_as
 >         ctx' es = let (xs, ys) = splitAt (length hls) es
 >                   in () :> Case (ctx xs) 
->                            [ p :-> abstract' vs y
+>                            [ p :-> open vs y
 >                            | (p@(_, novs) :-> _) <- as
 >                            , let vs = take novs nxthps
 >                            | y <- ys ]

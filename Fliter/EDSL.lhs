@@ -20,12 +20,12 @@
 > (/=$) v w = tag $ POp Ne (Fre v) (Fre w)
 > seqq v w = tag $ POp Seq (Fre v) (Fre w)
 > x @: vs = tag $ x :@ map Fre (words vs)
-> letIn bs x = tag $ Let (map snd bs) (abstract' (map fst bs) x)
+> letIn bs x = tag $ Let (map snd bs) (open (map fst bs) x)
 > (=:) = (,)
 > caseOf x as = tag $ Case x as
-> (-->) p y = (c, length vs) :-> abstract' vs y
+> (-->) p y = (c, length vs) :-> open vs y
 >   where (c:vs) = words p
-> lam p x = Lam (length vs) (abstract' vs x)
+> lam p x = Lam (length vs) (open vs x)
 >   where vs = words p                   
 > 
 > infix 8 =:
