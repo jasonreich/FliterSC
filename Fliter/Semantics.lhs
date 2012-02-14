@@ -67,16 +67,16 @@ Find the next available HP pointer.
 > nextKey m | Map.null m = HP 0
 >           | otherwise  = HP . (+) 1 . unHP . fst $ Map.findMax m
 
-Stacks are lists of stack elements.
-
-> type Stack t = [StackElem t]
-
 Stack elements indicate; application, updating, case distinction,
 left-hand primitive operation, right-hand primitive operation.
 
 > data StackElem t = App [HP] | Upd HP | Cas [Alte t HP] 
 >                  | PrL Op HP | PrR Op Int
 >                deriving Show
+
+Stacks are lists of stack elements.
+
+> type Stack t = [StackElem t]
 
 A state is a triple consisting of a heap, focus open expression and a
 stack.

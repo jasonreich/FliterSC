@@ -50,6 +50,8 @@ example program described in this way.
 
 > import Example
 > import Fliter.EDSL
+> import Fliter.Parser (parseProg)
+> import Fuel
 
 Global supercompilation state
 -----------------------------
@@ -139,7 +141,7 @@ fold back on any previously seen states.
 When driving terminates, the result is `tie`d.
 
 > drive :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> drive hist p s = memo (drive' hist p) s
+> drive hist p s = return (() :> Con "<BINGO>" []) `consumeFuel` memo (drive' hist p) s
 > 
 > drive' :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > drive' hist p s = case normalise p s of
