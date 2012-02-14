@@ -229,10 +229,7 @@ Unknown variable.
 > isUnknown s = case getRhs $ focus s of
 >   Var (Fre v)      -> isNothing . join $ v `Map.lookup` heap s
 >   POp _ _ _        -> True
->   POp _ (Fre v) _  -> isNothing . join $ v `Map.lookup` heap s
->   _                -> case stack s of
->     PrL _ w : _    -> isNothing . join $ w `Map.lookup` heap s
->     _              -> False
+>   _                -> False
 
 State utility functions
 -----------------------
