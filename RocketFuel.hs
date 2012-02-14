@@ -1,4 +1,4 @@
-module Fuel where
+module RocketFuel where
 
 import Data.IORef
 import System.IO.Unsafe

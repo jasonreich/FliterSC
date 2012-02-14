@@ -51,7 +51,7 @@ example program described in this way.
 > import Example
 > import Fliter.EDSL
 > import Fliter.Parser (parseProg)
-> import Fuel
+> import RocketFuel
 
 Global supercompilation state
 -----------------------------
@@ -204,7 +204,7 @@ Otherwise, return a pointer to it.
 >   let defn = Lam (length fvs) (open fvs rhs)
 >   scpSt <- get
 >   put $ scpSt { scDefinition = Map.insert i defn (scDefinition scpSt) }
->   return $ if i `Set.member` funRefs rhs
+>   return $ if True -- i `Set.member` funRefs rhs
 >              then () :> Fun i fvs
 >              else rhs
 
