@@ -1,14 +1,16 @@
 FliterSC: Matching
 ==================
 
+This module focuses on showing two states are equivalent.
+
 > module SC.Matching where
-> 
+
+Imports
+------
+
 > import Control.Applicative
 > import Control.Monad
 > import Control.Monad.State hiding (State)
-> import Control.Monad.Trans
-> import qualified Control.Monad.State as St
-> import Data.Map (Map)
 > import qualified Data.Map as Map
 > 
 > import Fliter.Miniplate

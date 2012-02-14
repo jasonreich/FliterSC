@@ -47,8 +47,8 @@
 >   , stack :: Stack t }
 >   deriving Show
 >   
-> initState :: Num a => State a
-> initState = S Map.empty (0 :> Fun 0 []) []
+> initState :: State ()
+> initState = S Map.empty (() :> Fun 0 []) []
 > 
 > -- Small-step semantics
 > data Exec h s = Cont s
@@ -170,10 +170,9 @@
 > 
 > freeVarsStk :: Stack t -> Set HP
 > freeVarsStk = Set.unions . map freeVarsSE
-> 
-> accessible :: Heap t -> Expr t HP -> Set HP
-> accessible h x = fixSet (maybe Set.empty freeVars . join . (`Map.lookup` h)) vs0
->   where vs0 = freeVars x
+>
+> accessible :: Heap t -> Set HP -> Set HP
+> accessible h vs0 = fixSet (maybe Set.empty freeVars . join . (`Map.lookup` h)) vs0
 > 
 > accessibleSt :: State t -> Set HP
 > accessibleSt s = fixSet (maybe Set.empty freeVars . join . (`Map.lookup` heap s)) vs0
@@ -182,7 +181,8 @@
 > gc :: State t -> State t
 > gc s = s { heap = heap' }
 >   where heap' = Map.filterWithKey (const . (`Set.member` vs)) (heap s)
->         vs = accessibleSt s
+>         vs0 = freeVars (focus s) `Set.union` freeVarsStk (stack s)
+>         vs = fixSet (maybe Set.empty freeVars . join . (`Map.lookup` heap s)) vs0
 >         
 > deTagSE (App vs)  = App vs
 > deTagSE (Upd v)   = Upd v

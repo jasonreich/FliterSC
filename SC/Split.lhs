@@ -17,6 +17,7 @@ for more info about any of these.
 > import Control.Arrow (first)
 > import Control.Monad
 > import qualified Data.Map as Map
+> import Data.Maybe
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -44,38 +45,17 @@ to the results of those supercompilations.
 Utility functions
 -----------------
 
-Make a new let only if we're binding to something.
+Compress lets where the new binding is not free in the others.
 
-> mkLet [] y = y
-> mkLet xs y = () :> Let xs y
+> mkLet (v, x) (() :> Let xs y) 
+>   | v `Set.notMember` (Set.unions $ map freeVars xs)
+>   = () :> Let (xs ++ [x]) (fmap (abstract rho) y)
+>   where rho v' | v == v'   = Bnd $ length xs
+>                | otherwise = Fre v'
+> mkLet (v, x) y = () :> Let [x] (abstract' [v] y)
 
-Rebuilding
-----------
-
-Rebuild an expression by placing accessible heap bindings in
-let-expressions, ensuring ordering for dependency.
-
-> rebuildHeap :: Heap () -> Expr () HP -> Expr () HP
-> rebuildHeap h fcs = rb [ (v, x) | (v, Just x) <- Map.toAscList h 
->                                 , v `Set.member` acc ] [] fcs
->   where 
->     acc = accessible h fcs
->     rb :: [(HP, Expr () HP)] -> [HP] -> Expr () HP -> Expr () HP
->     rb [] rho y = abstract' rho y
->     rb h  rho y = mkLet (map (abstract' rho) ls) (rb xs (vs ++ rho) y)
->       where (bs, xs) = spanHeap [] h
->             free = Set.unions $ map freeVars (y:map snd xs)
->             (vs, ls) = unzip $ filter ((`Set.member` free) . fst) bs
-
-Split an ordered heap such that none of the bindings on the left refer
-to each other.
-
-> spanHeap :: [HP] -> [(HP, Expr () HP)] 
->           -> ([(HP, Expr () HP)], [(HP, Expr () HP)])
-> spanHeap vs [] = ([], [])
-> spanHeap vs ((v,x):xs) 
->   | any (`Set.member` freeVars x) vs = ([], (v,x):xs)
->   | otherwise = first ((v,x):) $ spanHeap (v:vs) xs
+> wipe :: HP -> State t -> State t
+> wipe v s = s { heap = Map.insert v Nothing (heap s) }
 
 Splitting
 ---------
@@ -92,108 +72,126 @@ heap.
 
 TODO: Any shared heap must be abstracted and supercompiled separately.
 
-`split` starts the process by normalising applied variables and
+> split :: State t -> Bracket t
+> split s = splitHeap (heap s) . splitFocus $ s
+
+Split focus
+-----------
+
+`splitFocus` starts the process by normalising applied variables and
 capturing any variables which share values with the case subject.
 
-> split :: State t -> Bracket t
-> split s = case focus s of
->   t :> Var (Fre v)    -> splitStack [v] s
->   t :> Fun f vs@(_:_) -> splitStack [] $ 
->                          s { focus = t :> Fun f []
->                            , stack = App vs : stack s }
->   t :> Con c vs@(_:_) -> splitStack [] $ 
->                          s { focus = t :> Con c []
->                          , stack = App vs : stack s  }
->   t :> POp _ v w      -> badSplitApp [x | Fre x <- [v,w]] (heap s) $
->                          splitStack [] $ wipe [x | Fre x <- [v,w]] s
->   _                   -> splitStack [] s
+> splitFocus :: State t -> ([HP], Bracket t)
+> splitFocus (S h x@(_ :> Var (Fre v)) stk)
+>   = splitStack [v] stk x h
+> splitFocus (S h (t :> Con c vs@(_:_)) stk)
+>   = splitStack [] (App vs : stk) (t :> Con c []) h
+> splitFocus (S h (t :> Fun f vs@(_:_)) stk)
+>   = splitStack [] (App vs : stk) (t :> Fun f []) h
+> splitFocus (S h x@(_ :> POp _ (Fre v) (Fre w)) stk) 
+>   = first ((++) [v,w]) $ splitStack [] stk x h
+> splitFocus (S h x stk) = splitStack [] stk x h
 
-`splitStack` produces a bracket of a state based on the peeling off
-one stack element at at time. A list of variables where the current
-focus would be stored is accumulated to store case analysis
-assumptions.
+Split stack
+-----------
 
-> splitStack :: [HP] -> State t -> Bracket t
-> splitStack vs s = let t = getTag (focus s) in case stack s of
+`splitStack` peels off each stack element and produces; 
+
+*  a list of variables that have been applied
+*  a bracket equivalent to the state but having extracted states
+   equivalent to nearest case-alternatives.
+
+A list of variables where the current focus would be stored is 
+accumulated to inject case analysis assumptions.
+
+> splitStack :: [HP] -> Stack t -> Expr t HP -> Heap t
+>            -> ([HP], Bracket t)
   
 If the stack is empty, produce no further states and reconstruct
 an equivalent expression by turning heap entries into let-bindings.
   
->   []              -> B [] $ \_ -> rebuildHeap (heap s') (focus s')
->     where s' = deTagSt s
+> splitStack upds [] x h
+>   = ([], B [] $ const $ deTag x)
 
 If there was an update, this focus must have been stored there.
 Keep a note of that and continue down the stack.
 
->   (Upd v  : stk)  -> splitStack (v:vs) $ s { stack = stk }
+> splitStack upds (Upd v : stk) x h
+>   = splitStack (v:upds) stk x h
 
 On a case frame, split down case alternatives.
 
->   (Cas as : stk)  -> splitAlts vs (heap s) (focus s) stk as
+> splitStack upds (Cas as : stk) x h
+>   = (apps, B hls' ctx')
+>   where (apps, B hls ctx) = splitStack [] [] x h
+>         nxthps = (nextHPs . nextKey) h
+>         s_as = [ gc $ S h' (instantiate' vs y) stk
+>                | ((c, novs) :-> y) <- as
+>                , let vs = take novs nxthps
+>                , let x' = getTag y :> Con c vs
+>                , let h' = inserts h $ map (, Nothing) vs
+>                                    ++ map (, Just x') apps ]
+>         hls' = hls ++ s_as
+>         ctx' es = let (xs, ys) = splitAt (length hls) es
+>                   in () :> Case (ctx xs) 
+>                            [ p :-> abstract' vs y
+>                            | (p@(_, novs) :-> _) <- as
+>                            , let vs = take novs nxthps
+>                            | y <- ys ]
 
-If there was an application, we want to drive on the arguments,
-ensuring that nothing else can refer to it. The application is
-reconstructed and we continue down the stack.
+If there was an application, reapply and store the list of applied
+bindings. Continue down stack.
 
->   (App vs : stk)  -> badSplitApp vs (heap s) $ splitStack [] $
->                      wipe vs $
->                      s { focus = t :> (focus s :@ map Fre vs) 
->                        , stack = stk }
+> splitStack upds (App vs : stk) x h
+>   = (vs ++ apps, B hls $ \es -> () :> ctx es :@ map Fre vs)
+>   where (apps, B hls ctx) = splitStack [] stk x h
 
 On a left-half primitive application, do equivalent to the above but
 bind the focus for application. Continue down stack.
 
->   (PrL o w : stk) -> badSplitApp [w] (heap s)
->                      $ splitStack [] $ wipe [w] $
->                      s { focus = t :> Let [focus s] 
->                                        (t :> POp o (Bnd 0) (Fre w))
->                        , stack = stk }
+> splitStack upds (PrL o w : stk) x h
+>   = (w : apps, B hls $ \es -> () :> Let [ctx es] 
+>                               (() :> POp o (Bnd 0) (Fre w)))
+>   where (apps, B hls ctx) = splitStack [] stk x h
 
 On a right-half primitive application, reconstruct sensibly and
 continue down stack.
 
->   (PrR o m : stk) -> splitStack [] $
->                      s { focus = t :> Let [t :> PVa m, focus s] 
->                                        (t :> POp o (Bnd 0) (Bnd 1))
->                        , stack = stk }
+> splitStack upds (PrR o m : stk) x h
+>   = (apps, B hls $ \es -> () :> Let [() :> PVa m, ctx es] 
+>                           (() :> POp o (Bnd 0) (Bnd 1)))
+>   where (apps, B hls ctx) = splitStack [] stk x h
 
-Case splitting
---------------
+Split heap
+----------
 
-When an unknown exists in the context of a case, we proceed by case
-analysis. Relevant heap entries are updated with the assumed value.
-Then reconstruct a case-expression based on the results of those.
+Given a list of applied bindings and a bracket, we want to;
 
-> splitAlts :: [HP] -> Heap t -> Expr t HP -> Stack t -> [Alte t HP] 
->           -> Bracket t
-> splitAlts vs h fcs stk as = B hls ctx
->   where nxthps = (nextHPs . nextKey) h
->         hls = [ gc $ S (inserts h $ map (, Nothing) ws ++ map (, Just x) vs)
->                        (instantiate' ws y) stk
->               | ((c, nows) :-> y) <- as 
->               , let ws = take nows nxthps 
->               , let x = getTag fcs :> Con c ws ]
->         ctx ys = rebuildHeap (deTagH h) $ () :>
->                  Case (deTag fcs) [ ((c, nows) :-> abstract' ws y)
->                                   | ((c, nows) :-> _) <- as 
->                                   , let ws = take nows nxthps 
->                                   | y <- ys ]
+*  Drive on these applied bindings, (add holes to bracket), preventing
+   loss of sharing by;
+   *  Removing this bindings from the heaps of existing states.
+   *  And recursively doing the same for any bindings shared between
+      across these or between existing states.
+*  Reconstruct equivelent let-expressions representing these heap
+   entries.
 
-Application splitting
----------------------
+e.g.
 
-A very naive approach to splitting applications.
+  let x = foo in (let y = bar x in Pair x y)
+    ==>
+  ⟦ let x = ⟨ , foo,  ⟩ in (let y = ⟨ x->*, bar x,  ⟩ in Pair x y) ⟧
 
-> badSplitApp :: [HP] -> Heap t -> Bracket t -> Bracket t
-> badSplitApp vs h br = B hls ctx
->   where (vs', sts) = unzip [ (v, S h fcs [])
->                            | v <- vs
->                            , Just fcs <- [ join (Map.lookup v h) ] ]
->         hls = sts ++ holes br
->         ctx es = mkLet xs (abstract' vs' $ context br ys)
->           where (xs, ys) = splitAt (length sts) es
-
-Wipe a list of heap entries in a state.
-
-> wipe :: [HP] -> State t -> State t
-> wipe vs s = s { heap = inserts (heap s) (map (, Nothing) vs) }
+> splitHeap :: Heap t -> ([HP], Bracket t) -> Bracket t
+> splitHeap h (apps, br) = foldr sh br (Set.toAscList vs)
+>   where acc0 = Set.unions $ map accessibleSt $ holes br
+>         vs0 = Set.fromList apps 
+>         vs = Set.union vs0 $ acc0 `Set.intersection` accessible h vs0
+>         sh v br@(B hls ctx) = fromMaybe br $ do
+>           fcs <- join $ Map.lookup v h
+>           let s = gc $ S h fcs []
+>           let hls' = s : fmap (wipe v) hls
+>           let ctx' (x : ys) = let y = ctx ys
+>                               in if v `Set.member` freeVars y
+>                                 then mkLet (v, x) y
+>                                 else y
+>           return $ B hls' ctx'
