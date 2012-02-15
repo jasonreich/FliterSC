@@ -85,7 +85,7 @@ A monad is used to pass this state around.
 This indicates a new residual function has begun.
 
 > scInc :: ScpM ()
-> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 }) >> traceM (show $ scThisPromise s + 1)
+> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 }) >> traceM ((++) "\n#" $ show $ scThisPromise s + 1)
 
 Store these free variables if there is nothing else in there. Return
 the canonical free variables for this resudual index.
@@ -147,6 +147,8 @@ fold back on any previously seen states.
 
 When driving terminates, the result is `tie`d.
 
+> equivalent s s' = isJust (instanceOf s s') && isJust (instanceOf s' s)
+
 > drive :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > drive hist p s = return (() :> Con "<BINGO>" []) `consumeFuel` memo (drive' hist p) s
 > 
@@ -154,7 +156,7 @@ When driving terminates, the result is `tie`d.
 > drive' hist p s = traceM "Drive" >> traceM (show s) >> case normalise p s of
 >   Cont s' -> case terminate hist (summarise s') of
 >     Stop           -> traceM "Stop" >> tie p s'
->     Continue hist' -> drive hist' p s'
+>     Continue hist' -> traceM (show s') >> drive hist' p s'
 >   Halt s' -> traceM "Halt" >> tie p s'
 >   Crash   -> traceM "Crash" >> tie p s
 
