@@ -16,3 +16,6 @@ consumeFuel empty full = unsafePerformIO $ do
   modifyIORef fuelTank ((+) $ -1)
   value <- readIORef fuelTank
   return $ if value <= 0 then empty else full
+
+readTank :: IO Int
+readTank = readIORef fuelTank

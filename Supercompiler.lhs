@@ -51,7 +51,14 @@ example program described in this way.
 > import Example
 > import Fliter.EDSL
 > import Fliter.Parser (parseProg)
+
+Debugging stuff
+
 > import RocketFuel
+> import Debug.Trace
+
+> traceM :: Monad m => String -> m ()
+> traceM = flip trace $ return ()
 
 Global supercompilation state
 -----------------------------
@@ -78,7 +85,7 @@ A monad is used to pass this state around.
 This indicates a new residual function has begun.
 
 > scInc :: ScpM ()
-> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 })
+> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 }) >> traceM (show $ scThisPromise s + 1)
 
 Store these free variables if there is nothing else in there. Return
 the canonical free variables for this resudual index.
@@ -144,12 +151,12 @@ When driving terminates, the result is `tie`d.
 > drive hist p s = return (() :> Con "<BINGO>" []) `consumeFuel` memo (drive' hist p) s
 > 
 > drive' :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> drive' hist p s = case normalise p s of
->   Cont s' -> case terminate hist (summarise s) of
->     Stop           -> tie p s'
+> drive' hist p s = traceM "Drive" >> traceM (show s) >> case normalise p s of
+>   Cont s' -> case terminate hist (summarise s') of
+>     Stop           -> traceM "Stop" >> tie p s'
 >     Continue hist' -> drive hist' p s'
->   Halt s' -> tie p s'
->   Crash   -> tie p s
+>   Halt s' -> traceM "Halt" >> tie p s'
+>   Crash   -> traceM "Crash" >> tie p s
 
 In this case, we terminate when the bag of tags contained in a state
 grows. We `summarise` a state into a bag of tags.
@@ -172,13 +179,15 @@ states. If it is instances, probably should drive on arguments.
 >      -> State Nat -> ScpM (Expr () HP)
 > memo cont s = do
 >   scpSt <- get
+>   traceM "Memo"
+>   traceM $ show s
+>   traceM $ unlines $ map show (scPromises scpSt) ++ [""]
 >   let s_dt = deTagSt s
 >   let matches = [ (i, mapping)
->                 | (i, s') <- scPromises scpSt 
+>                 | (i, s') <- scPromises scpSt
 >                 , Just mapping <- [s_dt `instanceOf` s'] ]
->   scAddPromise s_dt 
 >   case matches of
->     []             -> cont s
+>     []             -> scAddPromise s_dt >> cont s
 >     (i, mapping):_ -> do
 >       fvs <- scPerhapsFreevars i $ map snd mapping
 >       return $ () :> (Fun i (mkArgs fvs mapping))
@@ -196,11 +205,11 @@ If it's simple and non-recursive, just return the residual expression.
 Otherwise, return a pointer to it.
 
 > tie :: Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> tie p s = do
+> tie p s = traceM "Tie" >> do
 >   let br@(B hls ctx) = split s
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
->   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p . gc) hls
+>   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
 >   let defn = Lam (length fvs) (open fvs rhs)
 >   scpSt <- get
 >   put $ scpSt { scDefinition = Map.insert i defn (scDefinition scpSt) }
