@@ -85,7 +85,7 @@ A monad is used to pass this state around.
 This indicates a new residual function has begun.
 
 > scInc :: ScpM ()
-> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 }) >> traceM ((++) "\n#" $ show $ scThisPromise s + 1)
+> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 })
 
 Store these free variables if there is nothing else in there. Return
 the canonical free variables for this resudual index.
@@ -104,6 +104,13 @@ Store this mapping of state to index.
 >   scpSt <- get
 >   let i = scThisPromise scpSt
 >   put $ scpSt { scPromises = scPromises scpSt ++ [(i, s)] }
+
+> scAddDefinition :: Ix -> [HP] -> Expr () HP -> ScpM ()
+> scAddDefinition f vs x = do
+>   scpSt <- get
+>   put $ scpSt { scDefinition = Map.insert f 
+>                                (Lam (length vs) (open vs x)) 
+>                                (scDefinition scpSt) }
 
 Make an effect but return the input.
 
@@ -180,17 +187,18 @@ states. If it is instances, probably should drive on arguments.
 > memo cont s = do
 >   scpSt <- get
 >   let s_dt = deTagSt s
->   let matches = [ (i, mapping)
->                 | (i, s') <- scPromises scpSt
+>   let matches = [ (i_prev, mapping)
+>                 | (i_prev, s') <- scPromises scpSt
 >                 , Just mapping <- [s_dt `equivalent` s'] ]
 >   case matches of
 >     []             -> scAddPromise s_dt >> cont s
->     (i, mapping):_ -> do
->       traceM "Memo"
->       traceM $ show s
->       traceM $ unlines $ map show (scPromises scpSt) ++ [""]
->       fvs <- scPerhapsFreevars i $ map snd mapping
->       return $ () :> (Fun i (mkArgs fvs mapping))
+>     (i_prev, mapping):_ -> do
+>       fvs_prev <- scPerhapsFreevars i_prev $ map snd mapping
+>       let x_cur = () :> Fun i_prev (mkArgs fvs_prev mapping)
+>       let i_cur = scThisPromise scpSt
+>       fvs_cur <- scPerhapsFreevars i_cur $ map fst mapping
+>       scAddDefinition i_cur fvs_cur x_cur
+>       return $ x_cur
 
 > mkArgs :: [HP] -> [(HP, HP)] -> [HP]
 > mkArgs xs ys = [ fst $ head $ filter ((== x) . snd) ys | x <- xs ]
@@ -205,14 +213,12 @@ If it's simple and non-recursive, just return the residual expression.
 Otherwise, return a pointer to it.
 
 > tie :: Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> tie p s = traceM "Tie" >> do
+> tie p s = do
 >   let br@(B hls ctx) = split s
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
 >   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
->   let defn = Lam (length fvs) (open fvs rhs)
->   scpSt <- get
->   put $ scpSt { scDefinition = Map.insert i defn (scDefinition scpSt) }
+>   scAddDefinition i fvs rhs
 >   return $ if True -- i `Set.member` funRefs rhs
 >              then () :> Fun i fvs
 >              else rhs
