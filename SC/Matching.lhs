@@ -105,3 +105,22 @@ Returns the list of s heap pointers mapped to free t heap pointers.
 >                                     fmap concat . mapM matchPtr
 >               (_,       Nothing) -> return [(v, w)]
 >   evalStateT (concat <$> mapM matchPtr initMatch) Map.empty
+
+> equivalent :: State () -> State () -> Maybe [(HP, HP)]
+> equivalent x y = do
+>   initMatch <- (++) <$> matchExpr (focus x) (focus y)
+>                     <*> matchStk  (stack x) (stack y)
+>   let matchPtr (v, w) = do
+>         assumed <- (Map.lookup w >=> return . (== v)) <$> get
+>         case assumed of
+>           Just False -> mzero
+>           Just True  -> return []
+>           Nothing    -> do
+>             modify $ Map.insert w v
+>             case ( join $ Map.lookup v (heap x)
+>                  , join $ Map.lookup w (heap y)) of
+>               (Nothing, Nothing) -> return [(v, w)]
+>               (Just i,  Just j)  -> lift (matchExpr i j) >>= 
+>                                     fmap concat . mapM matchPtr
+>               (_,       _)       -> mzero
+>   evalStateT (concat <$> mapM matchPtr initMatch) Map.empty

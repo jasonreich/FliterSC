@@ -103,7 +103,7 @@ Store this mapping of state to index.
 > scAddPromise s = do
 >   scpSt <- get
 >   let i = scThisPromise scpSt
->   put $ scpSt { scPromises = (i, s) : scPromises scpSt }
+>   put $ scpSt { scPromises = scPromises scpSt ++ [(i, s)] }
 
 Make an effect but return the input.
 
@@ -147,18 +147,16 @@ fold back on any previously seen states.
 
 When driving terminates, the result is `tie`d.
 
-> equivalent s s' = isJust (instanceOf s s') && isJust (instanceOf s' s)
-
 > drive :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > drive hist p s = return (() :> Con "<BINGO>" []) `consumeFuel` memo (drive' hist p) s
 > 
 > drive' :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> drive' hist p s = traceM "Drive" >> traceM (show s) >> case normalise p s of
+> drive' hist p s = case normalise p s of
 >   Cont s' -> case terminate hist (summarise s') of
->     Stop           -> traceM "Stop" >> tie p s'
->     Continue hist' -> traceM (show s') >> drive hist' p s'
->   Halt s' -> traceM "Halt" >> tie p s'
->   Crash   -> traceM "Crash" >> tie p s
+>     Stop           -> tie p s'
+>     Continue hist' -> drive hist' p s'
+>   Halt s' -> tie p s'
+>   Crash   -> tie p s
 
 In this case, we terminate when the bag of tags contained in a state
 grows. We `summarise` a state into a bag of tags.
@@ -181,16 +179,16 @@ states. If it is instances, probably should drive on arguments.
 >      -> State Nat -> ScpM (Expr () HP)
 > memo cont s = do
 >   scpSt <- get
->   traceM "Memo"
->   traceM $ show s
->   traceM $ unlines $ map show (scPromises scpSt) ++ [""]
 >   let s_dt = deTagSt s
 >   let matches = [ (i, mapping)
 >                 | (i, s') <- scPromises scpSt
->                 , Just mapping <- [s_dt `instanceOf` s'] ]
+>                 , Just mapping <- [s_dt `equivalent` s'] ]
 >   case matches of
 >     []             -> scAddPromise s_dt >> cont s
 >     (i, mapping):_ -> do
+>       traceM "Memo"
+>       traceM $ show s
+>       traceM $ unlines $ map show (scPromises scpSt) ++ [""]
 >       fvs <- scPerhapsFreevars i $ map snd mapping
 >       return $ () :> (Fun i (mkArgs fvs mapping))
 

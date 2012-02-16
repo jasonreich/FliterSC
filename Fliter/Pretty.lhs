@@ -25,9 +25,9 @@
 > prettyExpr :: [String] -> Expr' t String -> Doc
 > prettyExpr fresh (Var v)     = prettyVar v
 > prettyExpr fresh (Fun f [])  = text $ 'f' : show f
-> prettyExpr fresh (Fun f vs)  = prettyExpr fresh $ (undefined :> Fun f []) :@ map Fre vs
+> prettyExpr fresh (Fun f vs)  = prettyExpr fresh $ (undefined :> Fun f []) :@ map (Fre . ('@':)) vs
 > prettyExpr fresh (Con c [])  = text $ c
-> prettyExpr fresh (Con c vs)  = prettyExpr fresh $ (undefined :> Con c []) :@ map Fre vs
+> prettyExpr fresh (Con c vs)  = prettyExpr fresh $ (undefined :> Con c []) :@ map (Fre . ('@':)) vs
 > prettyExpr fresh (PVa n)     = text $ show n
 > prettyExpr fresh (POp o v w) = hsep [prettyVar v, prettyOp o, prettyVar w]
 > prettyExpr fresh (x :@ vs)   = hsep ((prettyExpr fresh . getRhs) x : map prettyVar vs)
