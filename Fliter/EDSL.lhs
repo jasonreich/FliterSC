@@ -26,7 +26,9 @@
 > (-->) p y = (c, length vs) :-> open vs y
 >   where (c:vs) = words p
 > lam p x = Lam (length vs) (open vs x)
->   where vs = words p                   
+>   where vs = words p        
+> func p x = (f, Lam (length vs) (open vs x))
+>   where (f:vs) = words p
 > 
 > infix 8 =:
 > infix 8 -->
@@ -36,14 +38,14 @@
 >                       | otherwise = con xs
 > 
 > example = Prog
->  [ lam "" $ letIn ["inc" =: fun 2, "xs" =: "Nil"]
->               $ letIn ["xs'" =: fun 1 @: "inc xs"]
->                 $ fun 1 @: "inc xs'"
->  , lam "f x" $ caseOf "x"
+>  [ func "main" $ letIn ["inc'" =: fun "inc", "xs" =: "Nil"]
+>               $ letIn ["xs'" =: fun "map" @: "inc' xs"]
+>                 $ fun "map" @: "inc' xs'"
+>  , func "map f x" $ caseOf "x"
 >      [ "Nil"       --> "Nil" 
 >      , "Cons x xs" --> letIn [ "x'"  =:  "f" @: "x"
->                              , "xs'" =: fun 1 @: "f xs" ]
+>                              , "xs'" =: fun "map" @: "f xs" ]
 >                        ("Cons" @: "x' xs'") ]
->  , lam "m" $ letIn [ "one" =: pVa 1 ] $ "m" +$ "one" ]
+>  , func "inc m" $ letIn [ "one" =: pVa 1 ] $ "m" +$ "one" ]
 >  
 > 

@@ -24,10 +24,10 @@
 > 
 > prettyExpr :: [String] -> Expr' t String -> Doc
 > prettyExpr fresh (Var v)     = prettyVar v
-> prettyExpr fresh (Fun f [])  = text $ 'f' : show f
-> prettyExpr fresh (Fun f vs)  = prettyExpr fresh $ (undefined :> Fun f []) :@ map Fre vs
+> prettyExpr fresh (Fun f [])  = text f
+> prettyExpr fresh (Fun f vs)  = prettyExpr fresh $ (undefined :> Fun f []) :@ map (Fre . ('@':)) vs
 > prettyExpr fresh (Con c [])  = text $ c
-> prettyExpr fresh (Con c vs)  = prettyExpr fresh $ (undefined :> Con c []) :@ map Fre vs
+> prettyExpr fresh (Con c vs)  = prettyExpr fresh $ (undefined :> Con c []) :@ map (Fre . ('@':)) vs
 > prettyExpr fresh (PVa n)     = text $ show n
 > prettyExpr fresh (POp o v w) = hsep [prettyVar v, prettyOp o, prettyVar w]
 > prettyExpr fresh (x :@ vs)   = hsep ((prettyExpr fresh . getRhs) x : map prettyVar vs)
@@ -52,11 +52,10 @@
 >   where (vs, fresh) = splitAt novs varSupply
 >         
 > prettyProg :: Prog t String -> Doc
-> prettyProg (Prog p) = vcat [ text ('f' : show i) <+> text (unwords vs) <+> text "=" <+>
+> prettyProg (Prog p) = vcat [ text f <+> text (unwords vs) <+> text "=" <+>
 >                              (prettyExpr fresh . getRhs) (close vs x)
->                            | Lam novs x <- p
->                            , let (vs, fresh) = splitAt novs varSupply 
->                            | i <- [0..] ]
+>                            | (f, Lam novs x) <- p
+>                            , let (vs, fresh) = splitAt novs varSupply ]
 > 
 > wrap x = "[" ++ show x ++ "]"
 > 

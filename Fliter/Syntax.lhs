@@ -83,7 +83,7 @@ stage but we shall state now that they will be *non-recursive*.
 
 > type Expr t free = t :> Expr' t free 
 > data Expr' t free = Var (V free)  -- Variables
->                   | Fun Ix [free] -- (Applied) functions
+>                   | Fun Id [free] -- (Applied) functions
 >                   | Con Id [free] -- (Applied) constructors
 >                   | PVa Int       -- Primitive integers
 >                   | POp Op (V free) (V free) -- Primitive operators
@@ -105,7 +105,7 @@ Functions are expressions with a specified number of bound variables.
 
 Programs are a list of functions.
 
-> newtype Prog t free = Prog [Func t free]
+> newtype Prog t free = Prog [(Id, Func t free)]
 >                     deriving (Eq, Functor)
 
 Close expressions
@@ -208,9 +208,9 @@ Is an expression in WHNF.
 
 > isWHNF :: Prog t free -> Expr t free -> Bool
 > isWHNF (Prog fs) (_ :> Con _ _)  = True
-> isWHNF (Prog fs) (_ :> Fun f vs) = case drop f fs of
->   [] -> True
->   (Lam novs _:_) -> length vs < novs
+> isWHNF (Prog fs) (_ :> Fun f vs) = case lookup f fs of
+>   Nothing -> True
+>   Just (Lam novs _) -> length vs < novs
 > isWHNF (Prog fs) (_ :> PVa _)    = True
 > isWHNF _         _               = False
 
@@ -228,7 +228,7 @@ The set of free variables in an expression.
 
 The set of references to functions.
 
-> funRefs :: Expr t a -> Set Ix
+> funRefs :: Expr t a -> Set Id
 > funRefs = fr . getRhs
 >   where fr (Fun f _) = Set.singleton f
 >         fr x = extract fr x
@@ -264,7 +264,7 @@ existing tag.
 > reTagProg :: (Applicative m, Monad m) => (t -> m t') -> Prog t a
 >           -> m (Prog t' a)
 > reTagProg f (Prog p) = fmap Prog $ sequence $
->                      [ Lam vs <$> reTag f rhs | Lam vs rhs <- p ]
+>                      [ (,) fid . Lam vs <$> reTag f rhs | (fid, Lam vs rhs) <- p ]
 
 Replace tags with unit.
  

@@ -24,6 +24,7 @@ function names to free variable listings and final definitions,
 and summaries of states for termination. `Set`s are used to describe
 free variables and used function names.
 
+> import Control.Arrow (first)
 > import Data.Map (Map)
 > import qualified Data.Map as Map
 > import Data.Maybe
@@ -50,6 +51,15 @@ example program described in this way.
 
 > import Example
 > import Fliter.EDSL
+> import Fliter.Parser (parseProg)
+
+Debugging stuff
+
+> import RocketFuel
+> import Debug.Trace
+
+> traceM :: Monad m => String -> m ()
+> traceM = flip trace $ {- const $ -} return ()
 
 Global supercompilation state
 -----------------------------
@@ -76,7 +86,7 @@ A monad is used to pass this state around.
 This indicates a new residual function has begun.
 
 > scInc :: ScpM ()
-> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 })
+> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 }) >> traceM ""
 
 Store these free variables if there is nothing else in there. Return
 the canonical free variables for this resudual index.
@@ -94,7 +104,14 @@ Store this mapping of state to index.
 > scAddPromise s = do
 >   scpSt <- get
 >   let i = scThisPromise scpSt
->   put $ scpSt { scPromises = (i, s) : scPromises scpSt }
+>   put $ scpSt { scPromises = scPromises scpSt ++ [(i, s)] }
+
+> scAddDefinition :: Ix -> [HP] -> Expr () HP -> ScpM ()
+> scAddDefinition f vs x = do
+>   scpSt <- get
+>   put $ scpSt { scDefinition = Map.insert f 
+>                                (Lam (length vs) (open vs x)) 
+>                                (scDefinition scpSt) }
 
 Make an effect but return the input.
 
@@ -115,16 +132,15 @@ The supercompiler process;
 4.  `drive` on this state (see driving section).
 5.  Reconstruct a program using the residual definitions.
 
-> sc :: Prog t a -> Func t' a' -> Int -> Prog () HP
-> sc p (Lam novs x) f0 = p'
+> sc :: Prog t a -> Func t' a' -> Prog () HP
+> sc p (Lam novs x) = p'
 >   where p0 = intTagProg $ unsafeEraseProg $ p
 >         Prog fs = deTagProg $ unsafeEraseProg $ p
 >         vs = map HP [0 .. novs - 1]
 >         s0 = S (Map.fromList [ (v, Nothing) | v <- vs ])
 >                (close vs $ unsafeEraseExpr $ intTag x) []
->         scp = execState (drive [] p0 s0) 
->               (initScp { scThisPromise = f0 })
->         p' = Prog (take f0 fs ++ Map.elems (scDefinition scp))
+>         scp = execState (drive [] p0 s0) initScp
+>         p' = Prog (map (first toFunId) (Map.toList (scDefinition scp)) ++ fs)
 
 Driving
 -------
@@ -139,15 +155,15 @@ fold back on any previously seen states.
 When driving terminates, the result is `tie`d.
 
 > drive :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> drive hist p s = memo (drive' hist p) s
+> drive hist p s = return (() :> Con "<BINGO>" []) `consumeFuel` memo (drive' hist p) s
 > 
 > drive' :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> drive' hist p s = case normalise p s of
->   Cont s' -> case terminate hist (summarise s) of
->     Stop           -> tie p s'
+> drive' hist p s = traceM (show s) >> case normalise p s of
+>   Cont s' -> case terminate hist (summarise s') of
+>     Stop           -> traceM "Stop" >> tie p s'
 >     Continue hist' -> drive hist' p s'
->   Halt s' -> tie p s'
->   Crash   -> tie p s
+>   Halt s' -> traceM "Halt" >> tie p s'
+>   Crash   -> traceM "Crash" >> tie p s
 
 In this case, we terminate when the bag of tags contained in a state
 grows. We `summarise` a state into a bag of tags.
@@ -171,18 +187,24 @@ states. If it is instances, probably should drive on arguments.
 > memo cont s = do
 >   scpSt <- get
 >   let s_dt = deTagSt s
->   let matches = [ (i, mapping)
->                 | (i, s') <- scPromises scpSt 
->                 , Just mapping <- [s_dt `instanceOf` s'] ]
->   scAddPromise s_dt 
+>   let matches = [ (i_prev, mapping)
+>                 | (i_prev, s') <- scPromises scpSt
+>                 , Just mapping <- [s_dt `equivalent` s'] ]
 >   case matches of
->     []             -> cont s
->     (i, mapping):_ -> do
->       fvs <- scPerhapsFreevars i $ map snd mapping
->       return $ () :> (Fun i (mkArgs fvs mapping))
+>     []                  -> scAddPromise s_dt >> cont s
+>     (i_prev, mapping):_ -> do
+>       fvs_prev <- scPerhapsFreevars i_prev $ map snd mapping
+>       let x_cur = () :> Fun (toFunId i_prev) (mkArgs fvs_prev mapping)
+>       -- let i_cur = scThisPromise scpSt
+>       -- fvs_cur <- scPerhapsFreevars i_cur $ map fst mapping
+>       -- scAddDefinition i_cur fvs_cur x_cur
+>       return $ x_cur
 
 > mkArgs :: [HP] -> [(HP, HP)] -> [HP]
-> mkArgs xs ys = [ fst $ head $ filter ((== x) . snd) ys | x <- xs ]
+> mkArgs xs ys = [ fst $ head $ filter ((== x) . snd) ys ++ ys | x <- xs ]
+
+> toFunId :: Ix -> Id
+> toFunId = ('h':) . show
 
 Tying
 -----
@@ -198,12 +220,10 @@ Otherwise, return a pointer to it.
 >   let br@(B hls ctx) = split s
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
->   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p . gc) hls
->   let defn = Lam (length fvs) (open fvs rhs)
->   scpSt <- get
->   put $ scpSt { scDefinition = Map.insert i defn (scDefinition scpSt) }
->   return $ if i `Set.member` funRefs rhs
->              then () :> Fun i fvs
+>   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
+>   scAddDefinition i fvs rhs
+>   return $ if True -- i `Set.member` funRefs rhs
+>              then () :> Fun (toFunId i) fvs
 >              else rhs
 
 [fliter]:  https://github.com/jasonreich/FliterSemantics

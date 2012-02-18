@@ -67,16 +67,16 @@ Find the next available HP pointer.
 > nextKey m | Map.null m = HP 0
 >           | otherwise  = HP . (+) 1 . unHP . fst $ Map.findMax m
 
-Stacks are lists of stack elements.
-
-> type Stack t = [StackElem t]
-
 Stack elements indicate; application, updating, case distinction,
 left-hand primitive operation, right-hand primitive operation.
 
 > data StackElem t = App [HP] | Upd HP | Cas [Alte t HP] 
 >                  | PrL Op HP | PrR Op Int
 >                deriving Show
+
+Stacks are lists of stack elements.
+
+> type Stack t = [StackElem t]
 
 A state is a triple consisting of a heap, focus open expression and a
 stack.
@@ -88,7 +88,7 @@ stack.
 >   deriving Show
 
 > initState :: State ()
-> initState = S Map.empty (() :> Fun 0 []) []
+> initState = S Map.empty (() :> Fun "main" []) []
 
 Execution monad
 ---------------
@@ -123,7 +123,7 @@ Single step execution of a state in a program context.
 >     return $ s { focus = fcs, stack = Upd v : stack s }
 >   Fun f vs    -> do
 >     let len_vs = length vs
->     Lam novs x <- toExec $ fs !! f
+>     Lam novs x <- toExec $ f `lookup` fs
 >     if novs <= len_vs
 >       then let (args, apps) = splitAt novs vs
 >            in  return $ s { focus = close args x
@@ -219,7 +219,7 @@ Saturated function application.
 > isPause (Prog fs) s = case getRhs $ focus s of
 >   Fun f vs  -> maybe False id $ do
 >     let len_vs = length vs
->     Lam novs x <- fs !! f
+>     Lam novs x <- f `lookup` fs
 >     return $ novs <= len_vs
 >   _         -> False
 

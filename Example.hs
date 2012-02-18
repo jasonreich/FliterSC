@@ -5,13 +5,13 @@ import Fliter.EDSL
 import Fliter.Syntax
 
 ex_mapmap = Prog
-  [ lam "" $ letIn ["input" =: con "Nil"] (fun 1 @: "input")
-  , lam "xs" $ letIn ["inc" =: fun 3]
-               $ letIn ["xs'" =: fun 2 @: "inc xs"]
-                 $ fun 2 @: "inc xs'"
-  , lam "f x" $ caseOf "x"
+  [ func "main" $ letIn ["input" =: con "Nil"] (fun "sc" @: "input")
+  , func "sc xs" $ letIn ["inc'" =: fun "inc"]
+               $ letIn ["xs'" =: fun "map" @: "inc' xs"]
+                 $ fun "map" @: "inc' xs'"
+  , func "map f x" $ caseOf "x"
       [ "Nil"       --> "Nil" 
       , "Cons x xs" --> letIn [ "x'"  =:  "f" @: "x"
-                              , "xs'" =: fun 2 @: "f xs" ]
+                              , "xs'" =: fun "map" @: "f xs" ]
                         ("Cons" @: "x' xs'") ]
-  , lam "m" $ letIn [ "one" =: pVa 1 ] $ "m" +$ "one" ]
+  , func "inc m" $ letIn [ "one" =: pVa 1 ] $ "m" +$ "one" ]
