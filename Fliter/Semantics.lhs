@@ -10,10 +10,6 @@ programs.
 Imports
 -------
 
-The default `(!!)` is surpressed as we prefer a explictly partial
-form.
-
-> import Prelude hiding ((!!))
 > import Control.Arrow (second)
 > import Control.Monad
 > import Data.Map (Map)
@@ -28,13 +24,6 @@ form.
 
 Utility functions 
 -----------------
-
-Explicitly partial indexing function.
-
-> (!!) :: [a] -> Int -> Maybe a
-> []     !! _ = Nothing
-> (x:_)  !! 0 = Just x
-> (_:xs) !! n = xs !! (n - 1)
 
 Insert multiple key/value pairs.
 

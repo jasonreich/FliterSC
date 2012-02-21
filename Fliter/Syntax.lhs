@@ -161,7 +161,8 @@ This uses the more generic.
 > abstract rho (Con c vs)  = (() :> Con c []) :@ map rho vs
 > abstract rho (PVa n)     = PVa n
 > abstract rho (POp o v w) = POp o (safeBind rho v) (safeBind rho w)
-> abstract rho (x :@ vs)   = fmap (abstract rho) x :@ map (safeBind rho) vs
+> abstract rho (x :@ vs)   = fmap (abstract rho) x :@ 
+>                            map (safeBind rho) vs
 > abstract rho (Let xs y)  = Let (map (fmap $ abstract rho) xs) y'
 >   where y' = fmap (abstract (bmap (+ length xs) . rho)) y
 > abstract rho (Case x as) = Case (fmap (abstract rho) x) as'
@@ -238,6 +239,9 @@ Assume the expression is closed when changing type.
 > unsafeEraseExpr :: Expr t a -> Expr t b
 > unsafeEraseExpr = fmap (fmap (error "Expecting no free variables!"))
 
+> unsafeEraseFunc :: Func t a -> Func t b
+> unsafeEraseFunc = fmap (error "Expecting no free variables!")
+
 > unsafeEraseProg :: Prog t a -> Prog t b
 > unsafeEraseProg = fmap (error "Expecting no free variables!")
 
@@ -264,7 +268,8 @@ existing tag.
 > reTagProg :: (Applicative m, Monad m) => (t -> m t') -> Prog t a
 >           -> m (Prog t' a)
 > reTagProg f (Prog p) = fmap Prog $ sequence $
->                      [ (,) fid . Lam vs <$> reTag f rhs | (fid, Lam vs rhs) <- p ]
+>                      [ (,) fid . Lam vs <$> reTag f rhs 
+>                      | (fid, Lam vs rhs) <- p ]
 
 Replace tags with unit.
  

@@ -123,24 +123,25 @@ The supercompiler
 
 The supercompiler process;
 
-1.  Take a program, `p`, an anonymous function `f@(Lam novs x)` and an
-    initial name for the residual function.
-2.  Tag each AST element of `p` and `f` with an integer. The set of
+1.  Take a program, `p` and a named function `(fid, Lam novs x)`.
+2.  Tag each AST element of `p` and `x` with an integer. The set of
     tags used should be finite as the trees will be finite.
 3.  Create a state, `s0` corresponding to `x` where the unbound 
     variables are empty heap positions.
 4.  `drive` on this state (see driving section).
 5.  Reconstruct a program using the residual definitions.
 
-> sc :: Prog t a -> Func t' a' -> Prog () HP
-> sc p (Lam novs x) = p'
->   where p0 = intTagProg $ unsafeEraseProg $ p
->         Prog fs = deTagProg $ unsafeEraseProg $ p
+> sc :: Prog t HP -> (Id, Func t' HP) -> Prog () HP
+> sc p (fid, Lam novs x) = p'
+>   where p0 = intTagProg $ p
+>         Prog fs = deTagProg $ p
 >         vs = map HP [0 .. novs - 1]
 >         s0 = S (Map.fromList [ (v, Nothing) | v <- vs ])
->                (close vs $ unsafeEraseExpr $ intTag x) []
->         scp = execState (drive [] p0 s0) initScp
->         p' = Prog (map (first toFunId) (Map.toList (scDefinition scp)) ++ fs)
+>                (close vs $ intTag x) []
+>         (x', scp) = runState (drive [] p0 s0) initScp
+>         p' = Prog $ Map.toList $
+>              Map.mapKeysMonotonic toFunId (scDefinition scp)
+>              `inserts` ((fid, Lam novs $ open vs $ x') : fs)
 
 Driving
 -------
@@ -178,9 +179,6 @@ Memoiser
 
 The `memo`iser checks to see if we've done this work before. If we
 have, we fold back on that definition.
-
-TODO: Consider if we should be doing instances or exact matches of
-states. If it is instances, probably should drive on arguments.
 
 > memo :: (State Nat -> ScpM (Expr () HP)) 
 >      -> State Nat -> ScpM (Expr () HP)
