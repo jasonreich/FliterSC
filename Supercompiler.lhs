@@ -140,6 +140,9 @@ The supercompiler process;
 >              Map.mapKeysMonotonic toFunId (scDefinition scp)
 >              `inserts` ((fid, Lam novs $ open vs $ x') : fs)
 
+> sc_wrapper p (fid, body) 
+>   = sc (unsafeEraseProg p) (fid, unsafeEraseFunc body)
+
 Driving
 -------
                   
