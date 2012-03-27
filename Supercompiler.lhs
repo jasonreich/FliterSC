@@ -24,17 +24,14 @@ function names to free variable listings and final definitions,
 and summaries of states for termination. `Set`s are used to describe
 free variables and used function names.
 
-> import Control.Arrow (first)
 > import Data.Map (Map)
 > import qualified Data.Map as Map
 > import Data.Maybe
-> import Data.Set (Set)
 > import qualified Data.Set as Set
 
 We import syntax, syntax manpulation and small-step semantics for
 F-liter.
 
-> import Fliter.Miniplate (extract)
 > import Fliter.Semantics
 > import Fliter.Syntax
 
@@ -55,7 +52,7 @@ example program described in this way.
 
 Debugging stuff
 
-> import RocketFuel
+> import Debug.RocketFuel
 > import Debug.Trace
 
 > traceM :: Monad m => String -> m ()
@@ -161,10 +158,10 @@ When driving terminates, the result is `tie`d.
 > drive' :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > drive' hist p s = traceM (show s) >> case normalise p s of
 >   Cont s' -> case terminate hist (summarise s') of
->     Stop           -> traceM "Stop" >> tie p s'
+>     Stop           -> traceM (show s') >> traceM "Stop" >> tie p s'
 >     Continue hist' -> drive hist' p s'
->   Halt s' -> traceM "Halt" >> tie p s'
->   Crash   -> traceM "Crash" >> tie p s
+>   Halt s' -> traceM (show s') >> traceM "Halt" >> tie p s'
+>   Crash   -> traceM (show s) >> traceM "Crash" >> tie p s
 
 In this case, we terminate when the bag of tags contained in a state
 grows. We `summarise` a state into a bag of tags.
@@ -220,7 +217,7 @@ Otherwise, return a pointer to it.
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
 >   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
 >   scAddDefinition i fvs rhs
->   return $ if True -- i `Set.member` funRefs rhs
+>   return $ if True -- toFunId i `Set.member` funRefs rhs
 >              then () :> Fun (toFunId i) fvs
 >              else rhs
 
