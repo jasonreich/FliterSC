@@ -62,8 +62,16 @@ testProg' (i, p_) = do
   let succeed_q = goesBingo q
   let u = execFor stepLimit q initState
   if succeed_q
-     then fail $ "@" ++ show i ++ ": Failed on SC!"
-     else if t <| u then return True else fail $ "@" ++ show i ++ ": Failed on semantic preservation!"
+     then do print $ fmap (const ()) p_
+             putStrLn ""
+             fail $ "@" ++ show i ++ ": Failed on SC!"
+     else if t <| u 
+             then return True 
+             else do print $ fmap (const ()) p_
+                     putStrLn ""
+                     print q
+                     putStrLn ""
+                     fail $ "@" ++ show i ++ ": Failed on semantic preservation!"
 
 mkLam :: Prog () a -> (Id, Func () a)
 mkLam (Prog ps) = (fId, Lam ar $ () :> ((() :> Fun fId []) :@ [Bnd i | i <- [0..ar - 1]]))
