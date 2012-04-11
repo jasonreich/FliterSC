@@ -1,7 +1,7 @@
 F-liter Supercompiler
 =====================
 
-*Debug variant.*
+*Debug variant.*  [![Build Status](https://secure.travis-ci.org/jasonreich/FliterSC.png?branch=debug)](http://travis-ci.org/jasonreich/FliterSC)
 
 A reimplementation of the Bollingbroke & Peyton-Jones (2010) compiler
 for the F-liter language in an attempt to understand it
