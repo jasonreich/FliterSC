@@ -8,6 +8,7 @@ import Example
 
 import Control.Monad
 import System.Environment
+import System.Exit
 
 scLimit :: Int
 scLimit = 1000
@@ -71,7 +72,8 @@ main = do
   as <- getArgs
   guard $ (not.null) as
   Right ps <- parseProgs $ head as
-  fmap and $ sequence $ [
+  result <- fmap and $ sequence $ [
    do putStrLn $ "Test " ++ show i ++ ":"
       testProg p
    | (i, p) <- zip [1..] ps ]
+  if result then exitSuccess else exitFailure
