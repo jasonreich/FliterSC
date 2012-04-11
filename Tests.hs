@@ -53,6 +53,18 @@ testProg p_ = do
        if res then putStrLn "Succeeded!\n" else fail "Failed!" 
        return $ res
 
+testProg' :: (Int, Prog t a) -> IO Bool
+testProg' (i, p_) = do
+  fillTank scLimit
+  let p = deTagProg $ unsafeEraseProg p_
+  let t = execFor stepLimit p initState
+  let q = sc p $ mkLam p
+  let succeed_q = goesBingo q
+  let u = execFor stepLimit q initState
+  if succeed_q
+     then fail $ "@" ++ show i ++ ": Failed on SC!"
+     else if t <| u then return True else fail $ "@" ++ show i ++ ": Failed on semantic preservation!"
+
 mkLam :: Prog () a -> (Id, Func () a)
 mkLam (Prog ps) = (fId, Lam ar $ () :> ((() :> Fun fId []) :@ [Bnd i | i <- [0..ar - 1]]))
   where (fId, Lam ar _) = last $ filter ((/= "main") . fst) ps ++ ps
@@ -72,8 +84,6 @@ main = do
   as <- getArgs
   guard $ (not.null) as
   ps <- parseProgs $ head as
-  result <- fmap and $ sequence $ [
-   do putStrLn $ "Test " ++ show i ++ ":"
-      testProg p
-   | (i, p) <- zip [1..] ps ]
+  result <- fmap and $ mapM testProg' $ zip [1..] ps
+  putStrLn $ "Tested " ++ show (length ps) ++ " programs."
   if result then exitSuccess else exitFailure
