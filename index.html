@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
+    <title>FliterSC by jasonreich</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>FliterSC</h1>
+        <h2>Supercompiler for F-liter, based on Bollingbroke &amp; Peyton-Jones (2010)</h2>
+
+        <section id="downloads">
+          <a href="https://github.com/jasonreich/FliterSC/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/jasonreich/FliterSC/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/jasonreich/FliterSC" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>F-liter Supercompiler</h1>
+
+<p><em>Debug variant.</em>    <a href="http://travis-ci.org/jasonreich/FliterSC"><img src="https://secure.travis-ci.org/jasonreich/FliterSC.png?branch=debug" alt="Build Status"></a></p>
+
+<p>A reimplementation of the Bollingbroke &amp; Peyton-Jones (2010) compiler
+for the F-liter language in an attempt to understand it
+better. Currently packaged as a library and as is. </p>
+
+<p>Try;</p>
+
+<pre>
+$ ghci Supercompiler
+λ&gt; ex_mapmap
+main  = let x = Nil
+        in sc x
+sc x = let y = inc
+       in
+          let z = map y x
+          in map y z
+map x y = case y of
+            Nil  -&gt; Nil
+            Cons z p -&gt; let
+                            q = x z
+                            r = map x p
+                        in Cons q r
+inc x = let y = 1
+        in x + y
+λ&gt; sc_wrapper ex_mapmap ("sc", lam "xs" $ fun "sc" @: "xs")
+...
+</pre>
+
+<p>It will supercompile the function <code>sc</code> of program <code>ex_mapmap</code> with an
+unknown input. </p>
+
+<h2>Extra debug features</h2>
+
+<p>To aid debugging, the <code>Debug.RocketFuel</code> library prematurely
+terminates supercompilation when a predetermined "fuel" supply
+is depleted. This a very unsafe implementation of the concept
+introduced in Whalley's (1994) <em>Automatic isolation of compiler
+errors.</em></p>
+
+<p>By default, the fuel tank is infinite (i.e. <code>Nothing</code>).</p>
+
+<ul>
+<li> <code>fuelTank</code> is a global variable.</li>
+<li> <code>disableTank</code> creates infinite fuel.</li>
+<li> <code>fillTank n</code> creates a finite pool of <code>n</code> units of fuel.</li>
+<li> <code>consumeFuel empty full</code> will consume 1 unit of fuel. If the tank
+is depleted, it returns <code>empty</code>, otherwise <code>full</code>.</li>
+<li> <code>readTank</code> returns the fuel tank value.</li>
+</ul>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
