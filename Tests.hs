@@ -36,7 +36,7 @@ testProg p_ = do
   case t of
     Crash  -> putStrLn $ "Crashed!"
     Halt v -> putStrLn $ "Terminated: " ++ show v
-    Cont v -> putStrLn $ "Unterminating."
+    Cont v -> putStrLn $ "Non-productive."
   putStr "> Supercompiling... "
   if succeed_q
      then do 
@@ -48,7 +48,7 @@ testProg p_ = do
        case u of
          Crash  -> putStrLn $ "Crashed!"
          Halt w -> putStrLn $ "Terminated: " ++ show w ++ ""
-         Cont w -> putStrLn $ "Unterminating."
+         Cont w -> putStrLn $ "Non-productive."
        let res = t <| u
        putStrLn $ if res then "Succeeded!\n" else "Failed!\n" 
        return $ res
