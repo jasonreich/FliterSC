@@ -2,8 +2,10 @@ module Fliter.Parser where
 
 import Control.Applicative ((<$>), (<*>), (*>), (<*))
 import Control.Monad
+import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.Char
 import Data.List
+import Data.Word
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as T
@@ -89,4 +91,9 @@ parseProg :: FilePath -> Prog () Id
 parseProg path = either (error "Failed!") id $ 
                  unsafePerformIO $ parseFromFile prog path
 
-parseProgs path = parseFromFile progs path
+parseProgs :: FilePath -> IO [Prog () Id]
+parseProgs path = zipWith aux [0..] <$> tail <$> BS.split '~' <$> BS.readFile path
+  where aux i str = case parse prog (path ++ '~' : show i) ('{' : BS.unpack str ++ "}") of
+          Left err -> error $ show err
+          Right p  -> p
+  

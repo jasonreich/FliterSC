@@ -40,7 +40,7 @@ testProg p_ = do
   putStr "> Supercompiling... "
   if succeed_q
      then do 
-       putStrLn $ "Failed!"
+       fail $ "Failed!"
        return False   
      else do
        putStrLn $ "Succeeded."
@@ -50,7 +50,7 @@ testProg p_ = do
          Halt w -> putStrLn $ "Terminated: " ++ show w ++ ""
          Cont w -> putStrLn $ "Non-productive."
        let res = t <| u
-       putStrLn $ if res then "Succeeded!\n" else "Failed!\n" 
+       if res then putStrLn "Succeeded!\n" else fail "Failed!" 
        return $ res
 
 mkLam :: Prog () a -> (Id, Func () a)
@@ -71,7 +71,7 @@ Halt v <| _      = False
 main = do
   as <- getArgs
   guard $ (not.null) as
-  Right ps <- parseProgs $ head as
+  ps <- parseProgs $ head as
   result <- fmap and $ sequence $ [
    do putStrLn $ "Test " ++ show i ++ ":"
       testProg p

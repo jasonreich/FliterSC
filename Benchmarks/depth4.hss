@@ -1,379 +1,315 @@
-{
+~
 main = A
-}
 
-{
+~
 f x = case x of {A -> B};
 main = f A
-}
 
-{
+~
 f x y = case x of {A -> y};
 main = f A A
-}
 
-{
+~
 f x y = case x of {A -> y};
 main = f A B
-}
 
-{
+~
 f = A f;
 g x = case x of {A p -> p};
 main = g f
-}
 
-{
+~
 f = A f;
 g x = case x of {A p -> g p};
 main = g f
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B x y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B y x; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B y y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B y f; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B f y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> x; B p -> g y p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> x; B p -> g p y};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g x p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g y p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g p x};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g p y};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g p p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g p A};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g p f};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g A p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g f p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B x; B p -> g y p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B x; B p -> g p y};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g x p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g y p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g p x};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g p y};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g p p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g p A};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g p f};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g A p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g f p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B f; B p -> g y p};
 main = g f A
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B f; B p -> g p y};
 main = g f A
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B x y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B y x; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B y y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B y f; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B f y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f f;
 g x y = case x of {A -> B x y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f f;
 g x y = case x of {A -> B y x; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f f;
 g x y = case x of {A -> B y f; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B f f;
 g x y = case x of {A -> B f y; B p q -> g p q};
 main = g f A
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> y; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B x y; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B y x; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B y y; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B y f; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B A f;
 g x y = case x of {A -> B f y; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g p A};
 main = g f f
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> y; B p -> g A p};
 main = g f f
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g p A};
 main = g f f
-}
 
-{
+~
 f = B f;
 g x y = case x of {A -> B y; B p -> g A p};
 main = g f f
-}
 
-{
+~
 f = A f;
 g x y = case x of {A p -> g y p};
 main = g f f
-}
 
-{
+~
 f = A f;
 g x y = case x of {A p -> g p y};
 main = g f f
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> y; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B x y; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B y x; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B y y; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B y f; B p q -> g p q};
 main = g f f
-}
 
-{
+~
 f = B f A;
 g x y = case x of {A -> B f y; B p q -> g p q};
 main = g f f
-}
 
