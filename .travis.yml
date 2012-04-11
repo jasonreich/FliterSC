@@ -1,2 +1,5 @@
 language: haskell
 script: runhaskell Tests Benchmark/depth4.hss
+branches:
+  only:
+    - debug
