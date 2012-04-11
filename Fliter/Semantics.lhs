@@ -187,6 +187,16 @@ Full execution
 >   Halt s' -> Just s'
 >   Cont s' -> exec p s'
 
+Partial execution
+-----------------
+
+> execFor :: Int -> Prog t HP -> State t -> Exec (Expr () ()) (Expr () ())
+> execFor 0 p s = Cont $ deTag $ fmap (fmap $ const ()) $ focus s
+> execFor n p s = case step p s of
+>   Crash   -> Crash
+>   Halt s' -> Halt $ deTag $ fmap (fmap $ const ()) $ focus s'
+>   Cont s' -> execFor (n - 1) p s'
+
 Strong normalisation
 --------------------
 

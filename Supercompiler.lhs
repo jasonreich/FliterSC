@@ -56,7 +56,7 @@ Debugging stuff
 > import Debug.Trace
 
 > traceM :: Monad m => String -> m ()
-> traceM = flip trace $ {- const $ -} return ()
+> traceM = {- flip trace $ -} const $ return ()
 
 Global supercompilation state
 -----------------------------
@@ -193,12 +193,13 @@ have, we fold back on that definition.
 >     (i_prev, mapping):_ -> do
 >       fvs_prev <- scPerhapsFreevars i_prev $ map snd mapping
 >       let x_cur = () :> Fun (toFunId i_prev) (mkArgs fvs_prev mapping)
->       -- let i_cur = scThisPromise scpSt
->       -- fvs_cur <- scPerhapsFreevars i_cur $ map fst mapping
->       -- scAddDefinition i_cur fvs_cur x_cur
+>       let i_cur = scThisPromise scpSt
+>       fvs_cur <- scPerhapsFreevars i_cur $ map fst mapping
+>       scAddDefinition i_cur fvs_cur x_cur
 >       return $ x_cur
 
 > mkArgs :: [HP] -> [(HP, HP)] -> [HP]
+> mkArgs _  []  = []
 > mkArgs xs ys = [ fst $ head $ filter ((== x) . snd) ys ++ ys | x <- xs ]
 
 > toFunId :: Ix -> Id
@@ -220,7 +221,7 @@ Otherwise, return a pointer to it.
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
 >   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
 >   scAddDefinition i fvs rhs
->   return $ if True -- toFunId i `Set.member` funRefs rhs
+>   return $ if toFunId i `Set.member` funRefs rhs
 >              then () :> Fun (toFunId i) fvs
 >              else rhs
 

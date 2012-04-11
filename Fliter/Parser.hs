@@ -36,7 +36,7 @@ con = try $ do v <- identifier
                return v
 
 expr :: [Id] -> Parser (Expr () Id)
-expr fs = (E.@:) <$> expr' fs <*> (unwords <$> many var)
+expr fs = (E.app) <$> expr' fs <*> many (expr' fs)
 
 expr' :: [Id] -> Parser (Expr () Id)
 expr' fs = (E.pVa . fromInteger) <$> integer
@@ -82,6 +82,11 @@ prog = do s <- getParserState
           setParserState s
           Prog <$> braces (semiSep1 $ func fs)
           
+progs :: Parser [Prog () Id]
+progs = many prog
+          
 parseProg :: FilePath -> Prog () Id
 parseProg path = either (error "Failed!") id $ 
                  unsafePerformIO $ parseFromFile prog path
+
+parseProgs path = parseFromFile progs path

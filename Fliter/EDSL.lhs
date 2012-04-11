@@ -9,6 +9,11 @@
 > 
 > tag  = (:>) ()
 > 
+> mkApp x [] = x
+> mkApp x ys = tag $ x :@ ys
+> mkLet [] y = y
+> mkLet xs y = tag $ Let xs y
+  
 > var  = tag . Var . Fre
 > fun  = tag . flip Fun []
 > con  = tag . flip Con []
@@ -49,3 +54,21 @@
 >  , func "inc m" $ letIn [ "one" =: pVa 1 ] $ "m" +$ "one" ]
 >  
 > 
+> isFre (_ :> (Var (Fre v))) = True
+> isFre _ = False
+>
+> app x ys = mkLet non_vs $ mkApp x ys'
+>  where non_vs = [ y | y <- ys, not (isFre y) ]
+>        ys' = aux 0 ys
+>        aux i [] = []
+>        aux i (_ :> Var (Fre v):ys) = Fre v : aux i ys
+>        aux i (_:ys) = Bnd i : aux (i + 1) ys
+
+> example' = Prog
+>  [ func "main" $ letIn ["inc'" =: fun "inc", "xs" =: "Nil"]
+>               $ letIn ["xs'" =: fun "map" @: "inc' xs"]
+>                 $ fun "map" @: "inc' xs'"
+>  , func "map f x" $ caseOf "x"
+>      [ "Nil"       --> "Nil" 
+>      , "Cons x xs" --> ("Cons" `app` ["f" @: "x", fun "map" @: "f xs"] ) ]
+>  , func "inc m" $ letIn [ "one" =: pVa 1 ] $ "m" +$ "one" ]
