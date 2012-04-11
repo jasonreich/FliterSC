@@ -1,4 +1,5 @@
 language: haskell
+install: echo "No installation."
 script: runhaskell Tests Benchmark/depth4.hss
 branches:
   only:
