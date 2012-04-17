@@ -203,18 +203,22 @@ have, we fold back on that definition.
 >     []                  -> scAddPromise s_dt >> cont s
 >     (i_prev, prevToCur):_ -> do
 >       fvs_prev <- scPerhapsFreevars i_prev $ map fst prevToCur
->       let x_cur = () :> Let [() :> Con "Null" []] (open [HP $ (-1)]
->                   (() :> Fun (toFunId i_prev) (mkArgs prevToCur fvs_prev)))
+>       let x_cur = wrapNull
+>                   (() :> Fun (toFunId i_prev) (mkArgs prevToCur fvs_prev))
 >       let i_cur = scThisPromise scpSt
 >       fvs_cur <- scPerhapsFreevars i_cur $ map snd prevToCur
 >       scAddDefinition i_cur fvs_cur x_cur
 >       return $ x_cur
 
-Product args for a given mapping.
+Produce arguments for given mappings and bindings.
 
 > mkArgs :: [(HP, HP)] -> [HP] -> [HP]
 > mkArgs prevToCur vs = [ fromMaybe (HP (-1)) (lookup v prevToCur)
 >                       | v <- vs ]
+
+> wrapNull x | noMissing = x
+>            | otherwise = () :> Let [() :> Con "Null" []] (open [HP $ (-1)] x)
+>  where noMissing = HP (-1) `Set.notMember` freeVars x
 
 > toFunId :: Ix -> Id
 > toFunId = ('h':) . show
