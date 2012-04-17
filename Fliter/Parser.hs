@@ -88,7 +88,7 @@ progs :: Parser [Prog () Id]
 progs = many prog
           
 parseProg :: FilePath -> Prog () Id
-parseProg path = either (error "Failed!") id $ 
+parseProg path = either (error . (++) "Failed: " . show) id $ 
                  unsafePerformIO $ parseFromFile prog path
 
 parseProgs :: FilePath -> IO [Prog () Id]

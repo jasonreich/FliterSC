@@ -33,10 +33,7 @@ testProg p_ = do
   let succeed_q = goesBingo q
   let u = execFor stepLimit q initState
   putStr "> Running program... "
-  case t of
-    Crash  -> putStrLn $ "Crashed!"
-    Halt v -> putStrLn $ "Terminated: " ++ show v
-    Cont v -> putStrLn $ "Non-productive."
+  showExec t
   putStr "> Supercompiling... "
   if succeed_q
      then do 
@@ -45,13 +42,15 @@ testProg p_ = do
      else do
        putStrLn $ "Succeeded."
        putStr "> Running supercompiled program... "
-       case u of
-         Crash  -> putStrLn $ "Crashed!"
-         Halt w -> putStrLn $ "Terminated: " ++ show w ++ ""
-         Cont w -> putStrLn $ "Non-productive."
+       showExec u
        let res = t <| u
        if res then putStrLn "Succeeded!\n" else fail "Failed!" 
        return $ res
+
+showExec t = case t of
+    Crash  -> putStrLn $ "Crashed!"
+    Halt v -> putStrLn $ "Terminated: " ++ show v
+    Cont v -> putStrLn $ "Non-productive."
 
 testProg' :: (Int, Prog t a) -> IO Bool
 testProg' (i, p_) = do
@@ -63,19 +62,23 @@ testProg' (i, p_) = do
   let u = execFor stepLimit q initState
   if succeed_q
      then do print $ fmap (const ()) p_
+             showExec t
              putStrLn ""
              fail $ "@" ++ show i ++ ": Failed on SC!"
      else if t <| u 
              then return True 
              else do print $ fmap (const ()) p_
+                     showExec t
                      putStrLn ""
                      print q
+                     showExec u
                      putStrLn ""
                      fail $ "@" ++ show i ++ ": Failed on semantic preservation!"
 
 mkLam :: Prog () a -> (Id, Func () a)
 mkLam (Prog ps) = (fId, Lam ar $ () :> ((() :> Fun fId []) :@ [Bnd i | i <- [0..ar - 1]]))
-  where (fId, Lam ar _) = last $ filter ((/= "main") . fst) ps ++ ps
+  where ps' = filter ((/= "main") . fst) ps
+        (fId, Lam ar _) = if null ps' then head ps else last ps'
 
 goesBingo :: Prog t a -> Bool
 goesBingo (Prog p) = or [ True

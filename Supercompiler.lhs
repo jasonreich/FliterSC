@@ -56,7 +56,8 @@ Debugging stuff
 > import Debug.Trace
 
 > traceM :: Monad m => String -> m ()
-> traceM = {- flip trace $ -} const $ return ()
+> -- traceM = flip trace $ return ()
+> traceM = const $ return ()
 
 Global supercompilation state
 -----------------------------
@@ -94,6 +95,16 @@ the canonical free variables for this resudual index.
 >   let m = Map.insertWith (flip const) i fvs (scFreeVars scpSt)
 >   put $ scpSt { scFreeVars = m }
 >   return (m Map.! i)
+
+Alternative encoding
+
+> scRecordFreevars :: State a -> ScpM (State a)
+> scRecordFreevars s = do
+>   scpSt <- get
+>   let vs = accessibleSt s `Set.intersection` Set.fromList (unknownVarsSt s)
+>   let m = Map.insert (scThisPromise scpSt) (Set.toList vs) (scFreeVars scpSt)
+>   put $ scpSt { scFreeVars = m }
+>   return s
 
 Store this mapping of state to index.
 
@@ -185,22 +196,25 @@ have, we fold back on that definition.
 > memo cont s = do
 >   scpSt <- get
 >   let s_dt = deTagSt s
->   let matches = [ (i_prev, mapping)
+>   let matches = [ (i_prev, prevToCur)
 >                 | (i_prev, s') <- scPromises scpSt
->                 , Just mapping <- [s_dt `equivalent` s'] ]
+>                 , Just prevToCur <- [s' `equivalent` s_dt] ]
 >   case matches of
 >     []                  -> scAddPromise s_dt >> cont s
->     (i_prev, mapping):_ -> do
->       fvs_prev <- scPerhapsFreevars i_prev $ map snd mapping
->       let x_cur = () :> Fun (toFunId i_prev) (mkArgs fvs_prev mapping)
+>     (i_prev, prevToCur):_ -> do
+>       fvs_prev <- scPerhapsFreevars i_prev $ map fst prevToCur
+>       let x_cur = () :> Let [() :> Con "Null" []] (open [HP $ (-1)]
+>                   (() :> Fun (toFunId i_prev) (mkArgs prevToCur fvs_prev)))
 >       let i_cur = scThisPromise scpSt
->       fvs_cur <- scPerhapsFreevars i_cur $ map fst mapping
+>       fvs_cur <- scPerhapsFreevars i_cur $ map snd prevToCur
 >       scAddDefinition i_cur fvs_cur x_cur
 >       return $ x_cur
 
-> mkArgs :: [HP] -> [(HP, HP)] -> [HP]
-> mkArgs _  []  = []
-> mkArgs xs ys = [ fst $ head $ filter ((== x) . snd) ys ++ ys | x <- xs ]
+Product args for a given mapping.
+
+> mkArgs :: [(HP, HP)] -> [HP] -> [HP]
+> mkArgs prevToCur vs = [ fromMaybe (HP (-1)) (lookup v prevToCur)
+>                       | v <- vs ]
 
 > toFunId :: Ix -> Id
 > toFunId = ('h':) . show
@@ -221,7 +235,7 @@ Otherwise, return a pointer to it.
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
 >   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
 >   scAddDefinition i fvs rhs
->   return $ if toFunId i `Set.member` funRefs rhs
+>   return $ if True -- toFunId i `Set.member` funRefs rhs
 >              then () :> Fun (toFunId i) fvs
 >              else rhs
 
