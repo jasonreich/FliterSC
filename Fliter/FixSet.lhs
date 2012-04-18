@@ -10,6 +10,7 @@
 >   where fixSet' []     = return ()
 >         fixSet' (y:ys) = do
 >           seen <- get
->           when (y `Set.notMember` seen) $ do
->             modify $ Set.insert y
->           fixSet' $ ys ++ Set.toList (m y)
+>           modify $ Set.insert y
+>           fixSet' $ if (y `Set.member` seen)
+>             then ys
+>             else ys ++ Set.toList (m y)

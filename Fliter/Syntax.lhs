@@ -24,6 +24,7 @@ Imports
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
+> import Fliter.FixSet
 > import Fliter.Miniplate
 
 Tagging
@@ -233,6 +234,13 @@ The set of references to functions.
 > funRefs = fr . getRhs
 >   where fr (Fun f _) = Set.singleton f
 >         fr x = extract fr x
+
+> funRefsProg :: Prog t a -> Set Id
+> funRefsProg (Prog fs) = fixSet aux (Set.singleton "main")
+>   where aux f = maybe Set.empty (\(Lam _ x) -> funRefs x) (lookup f fs)
+          
+> onlyReachable :: Prog t a -> Prog t a
+> onlyReachable p@(Prog fs) = Prog $ filter ((`Set.member` funRefsProg p) . fst) fs
 
 Assume the expression is closed when changing type.
 

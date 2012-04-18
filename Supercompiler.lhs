@@ -130,7 +130,7 @@ The supercompiler process;
 5.  Reconstruct a program using the residual definitions.
 
 > sc :: Prog t HP -> (Id, Func t' HP) -> Prog () HP
-> sc p (fid, Lam novs x) = p'
+> sc p (fid, Lam novs x) = onlyReachable p'
 >   where p0 = intTagProg $ p
 >         Prog fs = deTagProg $ p
 >         vs = map HP [0 .. novs - 1]
