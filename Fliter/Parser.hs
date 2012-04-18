@@ -92,7 +92,7 @@ parseProg path = either (error . (++) "Failed: " . show) id $
                  unsafePerformIO $ parseFromFile prog path
 
 parseProgs :: FilePath -> IO [Prog () Id]
-parseProgs path = zipWith aux [0..] <$> tail <$> BS.split '~' <$> BS.readFile path
+parseProgs path = zipWith aux [1..] <$> tail <$> BS.split '~' <$> BS.readFile path
   where aux i str = case parse prog (path ++ '~' : show i) ('{' : BS.unpack str ++ "}") of
           Left err -> error $ show err
           Right p  -> p

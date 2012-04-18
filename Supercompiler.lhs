@@ -84,7 +84,7 @@ A monad is used to pass this state around.
 This indicates a new residual function has begun.
 
 > scInc :: ScpM ()
-> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 }) >> traceM ""
+> scInc = get >>= \s -> put (s { scThisPromise = scThisPromise s + 1 }) >> traceM ('h' : (show $ scThisPromise s + 1) ++ ":")
 
 Store these free variables if there is nothing else in there. Return
 the canonical free variables for this resudual index.
@@ -196,12 +196,15 @@ have, we fold back on that definition.
 > memo cont s = do
 >   scpSt <- get
 >   let s_dt = deTagSt s
->   let matches = [ (i_prev, prevToCur)
+>   let matches = [ (i_prev, swap prevToCur, s')
 >                 | (i_prev, s') <- scPromises scpSt
->                 , Just prevToCur <- [s' `equivalent` s_dt] ]
+>                 , Just prevToCur <- [s_dt `equivalent` s'] ]
 >   case matches of
 >     []                  -> scAddPromise s_dt >> cont s
->     (i_prev, prevToCur):_ -> do
+>     (i_prev, prevToCur, s'):_ -> do
+>       traceM $ "Tied:"
+>       traceM $ show s
+>       traceM $ show s'
 >       fvs_prev <- scPerhapsFreevars i_prev $ map fst prevToCur
 >       let x_cur = wrapNull
 >                   (() :> Fun (toFunId i_prev) (mkArgs prevToCur fvs_prev))
@@ -215,6 +218,8 @@ Produce arguments for given mappings and bindings.
 > mkArgs :: [(HP, HP)] -> [HP] -> [HP]
 > mkArgs prevToCur vs = [ fromMaybe (HP (-1)) (lookup v prevToCur)
 >                       | v <- vs ]
+
+> swap xs = [ (x, y) | (y, x) <- xs ]
 
 > wrapNull x | noMissing = x
 >            | otherwise = () :> Let [() :> Con "Null" []] (open [HP $ (-1)] x)

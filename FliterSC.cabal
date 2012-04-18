@@ -1,0 +1,13 @@
+Name:                  FliterSC
+Version:               201204
+Description:           Supercompiler for the Fliter language
+Author:                Jason S. Reich <jason@cs.york.ac.uk>
+Maintainer:            Jason S. Reich <jason@cs.york.ac.uk>
+Cabal-Version:         >= 1.10
+Build-Type:            Simple
+
+Executable Tests
+   Main-is:          Tests.hs
+   Build-Depends:    base, containers, mtl, pretty, parsec >= 3, bytestring
+   Default-Language: Haskell2010
+   GHC-prof-options: -rtsopts -auto-all

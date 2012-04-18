@@ -1,6 +1,6 @@
 language: haskell
-install: echo "No installation."
-script: runhaskell Tests Benchmarks/depth5.hss
+install: cabal configure -O2 && cabal build
+script: dist/build/Tests/Tests Benchmarks/depth5.hss
 branches:
   only:
     - debug

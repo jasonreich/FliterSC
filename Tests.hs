@@ -6,6 +6,8 @@ import Fliter.Syntax
 import Supercompiler
 import Example
 
+import Debug.Trace
+
 import Control.Monad
 import System.Environment
 import System.Exit
@@ -54,6 +56,7 @@ showExec t = case t of
 
 testProg' :: (Int, Prog t a) -> IO Bool
 testProg' (i, p_) = do
+  when (i `mod` 10000 == 0) $ putStrLn $ "(Checked " ++ show i ++ ")"
   fillTank scLimit
   let p = deTagProg $ unsafeEraseProg p_
   let t = execFor stepLimit p initState
@@ -95,6 +98,5 @@ main = do
   as <- getArgs
   guard $ (not.null) as
   ps <- parseProgs $ head as
-  result <- fmap and $ mapM testProg' $ zip [1..] ps
-  putStrLn $ "Tested " ++ show (length ps) ++ " programs."
-  if result then exitSuccess else exitFailure
+  mapM_ testProg' $ zip [1..] ps  
+  putStrLn $ "Tested all programs."
