@@ -96,16 +96,6 @@ the canonical free variables for this resudual index.
 >   put $ scpSt { scFreeVars = m }
 >   return (m Map.! i)
 
-Alternative encoding
-
-> scRecordFreevars :: State a -> ScpM (State a)
-> scRecordFreevars s = do
->   scpSt <- get
->   let vs = accessibleSt s `Set.intersection` Set.fromList (unknownVarsSt s)
->   let m = Map.insert (scThisPromise scpSt) (Set.toList vs) (scFreeVars scpSt)
->   put $ scpSt { scFreeVars = m }
->   return s
-
 Store this mapping of state to index.
 
 > scAddPromise :: State () -> ScpM ()
@@ -244,7 +234,7 @@ Otherwise, return a pointer to it.
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
 >   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
 >   scAddDefinition i fvs rhs
->   return $ if True -- toFunId i `Set.member` funRefs rhs
+>   return $ if toFunId i `Set.member` funRefs rhs
 >              then () :> Fun (toFunId i) fvs
 >              else rhs
 
