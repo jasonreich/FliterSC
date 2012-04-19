@@ -14,6 +14,7 @@ Imports
 -------
 
 > import Control.Applicative
+> import Control.Arrow (second)
 > import Control.Monad.Identity
 > import Control.Monad.State
 > import Control.Monad.Writer
@@ -21,6 +22,7 @@ Imports
 > import Data.List
 > import Data.Map (Map)
 > import qualified Data.Map as Map
+> import Data.Maybe (fromMaybe)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -304,3 +306,16 @@ Extract a dictionary counting each tag.
 > exTag :: Ord a => Expr a b -> Map a Int
 > exTag x = foldr (flip (Map.insertWith (+)) 0) Map.empty 
 >           $ execWriter (reTag (\t -> tell (t:)) x) []
+
+Simple inline
+-------------
+
+Inline any root applications to functions.
+
+> simpleInline :: Eq a => Prog t a -> Prog t a
+> simpleInline (Prog fs) = Prog $ map (second aux) fs
+>   where aux l@(Lam ar (_ :> ((_ :> Fun f []) :@ args))) = fromMaybe l $ do
+>           Lam ar' body' <- f `lookup` fs
+>           guard (args == [ Bnd v | v <- [0..ar' - 1] ])
+>           return $ Lam ar body'
+>         aux l = l

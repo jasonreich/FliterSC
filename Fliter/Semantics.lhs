@@ -10,7 +10,7 @@ programs.
 Imports
 -------
 
-> import Control.Arrow (second)
+> import Control.Arrow (first, second)
 > import Control.Monad
 > import Data.Map (Map)
 > import qualified Data.Map as Map
@@ -190,12 +190,12 @@ Full execution
 Partial execution
 -----------------
 
-> execFor :: Int -> Prog t HP -> State t -> Exec (Expr () ()) (Expr () ())
-> execFor 0 p s = Cont $ deTag $ fmap (fmap $ const ()) $ focus s
+> execFor :: Int -> Prog t HP -> State t -> (Int, Exec (Expr () ()) (Expr () ()))
+> execFor 0 p s = (0, Cont $ deTag $ fmap (fmap $ const ()) $ focus s)
 > execFor n p s = case step p s of
->   Crash   -> Crash
->   Halt s' -> Halt $ deTag $ fmap (fmap $ const ()) $ focus s'
->   Cont s' -> execFor (n - 1) p s'
+>   Crash   -> (0, Crash)
+>   Halt s' -> (0, Halt $ deTag $ fmap (fmap $ const ()) $ focus s')
+>   Cont s' -> first (+1) $ execFor (n - 1) p s'
 
 Strong normalisation
 --------------------
