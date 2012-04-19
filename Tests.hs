@@ -41,7 +41,7 @@ testProg (i, p_) = do
              putStrLn ""
              fail $ "@" ++ show i ++ ": Failed on SC!"
      else if t <| u 
-             then if True -- (n <= m) 
+             then if (n <= m) 
                      then return True 
                      else do print $ fmap (const ()) p_
                              showExec t
