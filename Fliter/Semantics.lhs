@@ -230,13 +230,6 @@ Unknown variable or primitive.
 >   POp _ _ _        -> True
 >   _                -> False
 
-Lone variable.
-
-> isLoneVar :: State t -> Maybe HP
-> isLoneVar s = case (getRhs $ focus s, stack s) of
->   (Var (Fre v), []) -> maybe (Just v) (const Nothing) (join $ v `Map.lookup` heap s)
->   _                 -> Nothing
-
 State utility functions
 -----------------------
 

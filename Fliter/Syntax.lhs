@@ -22,7 +22,7 @@ Imports
 > import Data.List
 > import Data.Map (Map)
 > import qualified Data.Map as Map
-> import Data.Maybe (fromMaybe)
+> import Data.Maybe (isJust, fromJust, fromMaybe)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -319,3 +319,27 @@ Inline any root applications to functions.
 >           guard (args == [ Bnd v | v <- [0..ar' - 1] ])
 >           return $ Lam ar body'
 >         aux l = l
+
+Inlining
+--------
+
+Inline non-recursive functions.
+
+> nonRecInline :: Prog t a -> Prog t a
+> nonRecInline (Prog fs) = Prog [ (f, Lam ar $ aux (Set.singleton f) `fmap` x)
+>                               | (f, Lam ar x) <- fs ]
+>   where
+>     aux seen ((_ :> Fun f []) :@ vs) 
+>       | isJust body = aux (Set.insert f seen) (fromJust body)
+>       where mkApp x [] = getRhs x
+>             mkApp x ys = x :@ ys
+>             body = do guard $ f `Set.notMember` seen
+>                       Lam ar rhs <- f `lookup` fs
+>                       guard $ ar <= length vs
+>                       let (applied, surplus) = splitAt ar vs
+>                       let rho i | i < 0     = Bnd i
+>                                 | i < ar    = applied !! i
+>                                 | otherwise = error "nonRecInline: Beyond binding!"
+>                       return $ mkApp (instantiate rho `fmap` rhs) surplus
+>     aux seen ((_ :> x :@ vs) :@ ws)  = aux seen (x :@ (vs ++ ws))
+>     aux seen x = descend (aux seen) x

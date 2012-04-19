@@ -130,7 +130,7 @@ The supercompiler process;
 5.  Reconstruct a program using the residual definitions.
 
 > sc :: Prog t HP -> (Id, Func t' HP) -> Prog () HP
-> sc p (fid, Lam novs x) = onlyReachable $ simpleInline p'
+> sc p (fid, Lam novs x) = onlyReachable $ nonRecInline p'
 >   where p0 = intTagProg $ p
 >         Prog fs = deTagProg $ p
 >         vs = map HP [0 .. novs - 1]
@@ -232,18 +232,9 @@ Otherwise, return a pointer to it.
 >   let br@(B hls ctx) = split s
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
->   rhs <- fmap ctx $ mapM (ignoreDull (bypass scInc >=> drive [] p)) hls
+>   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
 >   scAddDefinition i fvs rhs
->   return $ if toFunId i `Set.member` funRefs rhs
->              then () :> Fun (toFunId i) fvs
->              else rhs
-
-Ignores dull contexts.
-
-> ignoreDull :: (State Nat -> ScpM (Expr () HP)) -> State Nat -> ScpM (Expr () HP)
-> ignoreDull def st = case isLoneVar st of
->   Just v  -> return $ () :> Var (Fre v)
->   Nothing -> def st
+>   return $ () :> Fun (toFunId i) fvs
 
 [fliter]:  https://github.com/jasonreich/FliterSemantics
 [bol2010]: http://dx.doi.org/10.1145/1863523.1863540
