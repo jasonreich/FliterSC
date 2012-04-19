@@ -6,9 +6,8 @@ import Fliter.Syntax
 import Supercompiler
 import Example
 
-import Debug.Trace
-
 import Control.Monad
+import Data.IORef
 import System.Environment
 import System.Exit
 
@@ -26,8 +25,9 @@ stepLimit = 1000
 --     with a value `w`.
 -- 4.  Passes if; supercompilation terminates *and* (running `p`
 --     does not terminate *or* (`q` does terminate and `v == w`).
-testProg :: (Int, Prog t a) -> IO Bool
-testProg (i, p_) = do
+testProg :: IORef (Int, Int) -> (Int, Prog t a) -> IO Bool
+testProg counters (i, p_) = do
+  incCounter counters False
   when (i `mod` 10000 == 0) $ putStrLn $ "(Checked " ++ show i ++ ")"
   fillTank scLimit
   let p = deTagProg $ unsafeEraseProg p_
@@ -35,6 +35,7 @@ testProg (i, p_) = do
   let q = sc p $ mkLam p
   let succeed_q = goesBingo q
   let (n, u) = execFor stepLimit q initState
+  when (n < m) $ incCounter counters True
   if succeed_q
      then do print $ fmap (const ()) p_
              showExec t
@@ -56,6 +57,12 @@ testProg (i, p_) = do
                      showExec u
                      putStrLn ""
                      fail $ "@" ++ show i ++ ": Failed on semantic preservation!"
+
+incCounter counters switch = do
+  (total, improved) <- readIORef counters
+  let total' = if switch then total + 1 else total
+  let improved' = if switch then improved else improved + 1
+  total' `seq` improved' `seq` writeIORef counters (total', improved')
 
 showExec t = case t of
     Crash  -> putStrLn $ "Crashed!"
@@ -79,8 +86,10 @@ Halt v <| Halt w = v == w
 Halt v <| _      = False
 
 main = do
+  counters <- newIORef (0, 0)
   as <- getArgs
   guard $ (not.null) as
   ps <- parseProgs $ head as
-  mapM_ testProg $ zip [1..] ps  
-  putStrLn $ "Tested all programs."
+  mapM_ (testProg counters) $ zip [1..] ps  
+  (total, improved) <- readIORef counters
+  putStrLn $ "Tested " ++ show total ++ " programs of which " ++ show improved ++ " strictly improved performance."
