@@ -60,8 +60,8 @@ testProg counters (i, p_) = do
 
 incCounter counters switch = do
   (total, improved) <- readIORef counters
-  let total' = if switch then total + 1 else total
-  let improved' = if switch then improved else improved + 1
+  let total' = if switch then total else total + 1
+  let improved' = if switch then improved + 1 else improved
   total' `seq` improved' `seq` writeIORef counters (total', improved')
 
 showExec t = case t of
