@@ -222,13 +222,20 @@ Saturated function application.
 >     return $ novs <= len_vs
 >   _         -> False
 
-Unknown variable.
+Unknown variable or primitive.
 
 > isUnknown :: State t -> Bool
 > isUnknown s = case getRhs $ focus s of
 >   Var (Fre v)      -> isNothing . join $ v `Map.lookup` heap s
 >   POp _ _ _        -> True
 >   _                -> False
+
+Lone variable.
+
+> isLoneVar :: State t -> Maybe HP
+> isLoneVar s = case (getRhs $ focus s, stack s) of
+>   (Var (Fre v), []) -> maybe (Just v) (const Nothing) (join $ v `Map.lookup` heap s)
+>   _                 -> Nothing
 
 State utility functions
 -----------------------
