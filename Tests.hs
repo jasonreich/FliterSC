@@ -85,11 +85,21 @@ Cont _ <| _      = True
 Halt v <| Halt w = v == w
 Halt v <| _      = False
 
+benchmarks = ["Benchmarks/Fib.hs"]
+
 main = do
+  putStrLn "Testing generated programs:"
   counters <- newIORef (0, 0)
   as <- getArgs
   guard $ (not.null) as
   ps <- parseProgs $ head as
   mapM_ (testProg counters) $ zip [1..] ps  
   (total, improved) <- readIORef counters
-  putStrLn $ "Tested " ++ show total ++ " programs of which " ++ show improved ++ " strictly improved performance."
+  putStrLn $ "Tested " ++ show total ++ " programs of which " ++ 
+    show improved ++ " strictly improved performance.\n"
+  putStrLn "Testing constructed programs:"
+  counters <- newIORef (0, 0)
+  mapM_ (testProg counters) $ zip [1..] $ map parseProg benchmarks
+  (total, improved) <- readIORef counters
+  putStrLn $ "Tested " ++ show total ++ " programs of which " ++ 
+    show improved ++ " strictly improved performance.\n"
