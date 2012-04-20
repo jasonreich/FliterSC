@@ -1,4 +1,3 @@
-> {-# LANGUAGE ParallelListComp, FlexibleInstances #-}
 > module Fliter.Pretty where
 > 
 > import Control.Arrow (first)
