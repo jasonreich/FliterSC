@@ -33,10 +33,10 @@ testProg counters (i, p_) = do
   let p = deTagProg $ unsafeEraseProg p_
   let (m, t) = execFor stepLimit p initState
   let q = sc p $ mkLam p
-  let succeed_q = goesBingo q
+  let failed_q = goesBingo q
   let (n, u) = execFor stepLimit q initState
   when (n < m) $ incCounter counters True
-  if succeed_q
+  if failed_q
      then do print $ fmap (const ()) p_
              showExec t
              putStrLn ""
@@ -77,7 +77,7 @@ mkLam (Prog ps) = (fId, Lam ar $ () :> ((() :> Fun fId []) :@ [Bnd i | i <- [0..
 goesBingo :: Prog t a -> Bool
 goesBingo (Prog p) = or [ True
                         | (_, Lam _ x) <- p 
-                        , Con "<BINGO>" [] <- universe $ getRhs $ x ]
+                        , Con "<BINGO>" _ <- universe $ getRhs $ x ]
 
 (<|) :: Exec (Expr () ()) (Expr () ()) -> Exec (Expr () ()) (Expr () ()) -> Bool
 Crash  <| _      = True

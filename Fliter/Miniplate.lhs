@@ -15,4 +15,4 @@
 > extract f x = mconcat $ map f $ children $ uniplate x
 >
 > universe :: (Uniplate a) => a -> [a]
-> universe = extract return
+> universe x = x : concatMap universe (children $ uniplate x)
