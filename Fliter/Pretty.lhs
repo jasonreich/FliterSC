@@ -2,10 +2,16 @@
 > module Fliter.Pretty where
 > 
 > import Control.Arrow (first)
-> import Text.PrettyPrint.HughesPJ
+> import Text.PrettyPrint.Leijen
 > 
 > import Fliter.Syntax
 > 
+> braceSemiFront = align . encloseSep (lbrace <> space) (space <> rbrace) (semi <> space)
+> intermap f [] = []
+> intermap f [x] = [x]
+> intermap f (x:xs) = f x : intermap f xs
+> braceSemiEnd xs = lbrace <$> (vsep . intermap (<> text ";" <> line)) xs <$> rbrace
+>
 > varSupply = [ c : i | i <- "" : map show [0..], c <- "xyzpqrijkmn"]
 > 
 > prettyOp Pl = text "+"
@@ -31,14 +37,14 @@
 > prettyExpr fresh (PVa n)     = text $ show n
 > prettyExpr fresh (POp o v w) = hsep [prettyVar v, prettyOp o, prettyVar w]
 > prettyExpr fresh (x :@ vs)   = hsep ((prettyExpr fresh . getRhs) x : map prettyVar vs)
-> prettyExpr fresh (Let xs y)  =  hang (text "let") 4 (vcat [ hsep [ text v, text "="
->                                                                  , (prettyExpr fresh . getRhs) x]
->                                                             | (v, x) <- bs])
->                                $$ hang (text "in")  3 ((prettyExpr fresh' . getRhs) $ close vs y)
->   where (bs, fresh') = zipDrop fresh xs
+> prettyExpr fresh (Let xs y)  = align $ text "let" <+> braceSemiFront bindings <$> 
+>                                        text "in" <+> align ((prettyExpr fresh' . getRhs) $ close vs y)
+>   where bindings = [ text v <+> text "=" <+> align (prettyExpr fresh . getRhs $ x)
+>                    | (v, x) <- bs ]
+>         (bs, fresh') = zipDrop fresh xs
 >         vs = map fst bs
-> prettyExpr fresh (Case x as)   =  hang (text "case") 5  ((prettyExpr fresh . getRhs) x) <+> text "of"
->                                $$ (nest 2 . vcat) (map (prettyAlte fresh) as)
+> prettyExpr fresh (Case x as)   = nest 2 $ text "case" <+> align ((prettyExpr fresh . getRhs) x) <+> text "of" <$>
+>                                           (braceSemiFront . map (prettyAlte fresh) $ as)
 >                                
 > prettyAlte :: [String] -> Alte t String -> Doc
 > prettyAlte fresh ((c, novs) :-> y)
@@ -52,7 +58,8 @@
 >   where (vs, fresh) = splitAt novs varSupply
 >         
 > prettyProg :: Prog t String -> Doc
-> prettyProg (Prog p) = vcat [ text f <+> text (unwords vs) <+> text "=" <+>
+> prettyProg (Prog p) = braceSemiEnd $
+>                       [ text f <+> text (unwords vs) <+> text "=" <+>
 >                              (prettyExpr fresh . getRhs) (close vs x)
 >                            | (f, Lam novs x) <- p
 >                            , let (vs, fresh) = splitAt novs varSupply ]
@@ -60,13 +67,13 @@
 > wrap x = "[" ++ show x ++ "]"
 > 
 > instance Show a => Show (Prog t a) where
->   show = render . prettyProg . fmap wrap
+>   showsPrec _ = displayS . renderPretty 0.4 60 . prettyProg . fmap wrap
 >   
 > instance Show a => Show (Func t a) where
->   show = render . prettyFunc . fmap wrap
+>   showsPrec _ = displayS . renderPretty 0.4 60 . prettyFunc . fmap wrap
 >   
 > instance Show a => Show (Expr' t a) where
->   show = render . prettyExpr varSupply . fmap wrap
+>   showsPrec _ = displayS . renderCompact . prettyExpr varSupply . fmap wrap
 >   
 > instance Show a => Show (Alte t a) where
->   show = render . prettyAlte varSupply . fmap wrap
+>   showsPrec _ = displayS . renderCompact . prettyAlte varSupply . fmap wrap

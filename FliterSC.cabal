@@ -8,6 +8,7 @@ Build-Type:            Simple
 
 Executable Tests
    Main-is:          Tests.hs
-   Build-Depends:    base, containers, mtl, pretty, parsec >= 3, bytestring
+   Build-Depends:    base, containers, mtl, pretty, parsec >= 3, 
+                     bytestring, wl-pprint
    Default-Language: Haskell2010
    GHC-prof-options: -rtsopts -auto-all
