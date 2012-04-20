@@ -255,6 +255,12 @@ Assume the expression is closed when changing type.
 > unsafeEraseProg :: Prog t a -> Prog t b
 > unsafeEraseProg = fmap (error "Expecting no free variables!")
 
+> eraseFreeExpr :: Expr t a -> Expr t ()
+> eraseFreeExpr = fmap $ fmap $ const ()
+
+> eraseFreeProg :: Prog t a -> Prog t ()
+> eraseFreeProg = fmap $ const ()
+
 Tag utilities
 -------------
 

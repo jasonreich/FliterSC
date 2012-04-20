@@ -11,6 +11,7 @@ Imports
 Nothing too complicated here.
 
 > import Control.Applicative
+> import Data.List
 > import Control.Monad
 > import Control.Monad.State hiding (State)
 > import qualified Data.Map as Map
@@ -44,7 +45,7 @@ returns the list of variable pairs.
 
 > matchExpr :: Expr () a -> Expr () b -> Maybe [(a, b)]
 > matchExpr x y = do
->   guard $ fmap (fmap (const ())) x == fmap (fmap (const ())) y
+>   guard $ eraseFreeExpr x == eraseFreeExpr y
 >   return $ zip (heapPointers x) (heapPointers y)
 
 Two stack elements are equivelent up to variable names if they are
@@ -108,19 +109,22 @@ Returns the list of s heap pointers mapped to free t heap pointers.
 
 > equivalent :: State () -> State () -> Maybe [(HP, HP)]
 > equivalent x y = do
->   initMatch <- (++) <$> matchExpr (focus x) (focus y)
->                     <*> matchStk  (stack x) (stack y)
->   let matchPtr (v, w) = do
->         assumed <- (Map.lookup w >=> return . (== v)) <$> get
->         case assumed of
->           Just False -> mzero
->           Just True  -> return []
->           Nothing    -> do
->             modify $ Map.insert w v
->             case ( join $ Map.lookup v (heap x)
->                  , join $ Map.lookup w (heap y)) of
->               (Nothing, Nothing) -> return [(v, w)]
->               (Just i,  Just j)  -> lift (matchExpr i j) >>= 
->                                     fmap concat . mapM matchPtr
->               (_,       _)       -> mzero
->   evalStateT (concat <$> mapM matchPtr initMatch) Map.empty
+>     initMatch <- (++) <$> matchExpr (focus x) (focus y)
+>                       <*> matchStk  (stack x) (stack y)                 
+>     evalStateT (concat <$> mapM matchPtr initMatch) []
+>   where matchPtr :: (HP, HP) -> StateT [(HP, HP)] Maybe [(HP, HP)]
+>         matchPtr (v, w) = do
+>           assumptions <- get
+>           let assoc_v = filter ((==) v . fst) $ assumptions
+>           guard $ all ((==) w . snd) $ assoc_v
+>           let assoc_w = filter ((==) w . snd) $ assumptions
+>           guard $ all ((==) v . fst) $ assoc_w
+>           if (not.null) assoc_v
+>              then return []
+>              else do modify $ nub . ((v,w) :)
+>                      case ( join $ Map.lookup v (heap x)
+>                           , join $ Map.lookup w (heap y)) of
+>                        (Nothing, Nothing) -> return [(v, w)]
+>                        (Just i,  Just j)  -> lift (matchExpr i j) >>=
+>                                              fmap concat . mapM matchPtr
+>                        (_,       _)       -> mzero

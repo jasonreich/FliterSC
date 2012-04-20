@@ -186,9 +186,9 @@ have, we fold back on that definition.
 > memo cont s = do
 >   scpSt <- get
 >   let s_dt = deTagSt s
->   let matches = [ (i_prev, swap prevToCur, s')
+>   let matches = [ (i_prev, prevToCur, s')
 >                 | (i_prev, s') <- scPromises scpSt
->                 , Just prevToCur <- [s_dt `equivalent` s'] ]
+>                 , Just prevToCur <- [s' `equivalent` s_dt] ]
 >   case matches of
 >     []                  -> scAddPromise s_dt >> cont s
 >     (i_prev, prevToCur, s'):_ -> do
@@ -208,8 +208,6 @@ Produce arguments for given mappings and bindings.
 > mkArgs :: [(HP, HP)] -> [HP] -> [HP]
 > mkArgs prevToCur vs = [ fromMaybe (HP (-1)) (lookup v prevToCur)
 >                       | v <- vs ]
-
-> swap xs = [ (x, y) | (y, x) <- xs ]
 
 > wrapNull x | noMissing = x
 >            | otherwise = () :> Let [() :> Con "Null" []] (open [HP $ (-1)] x)
