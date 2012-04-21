@@ -1,5 +1,4 @@
 {
-
 and x y = case x of
   { False -> False
   ; True  -> y };
@@ -12,7 +11,7 @@ map f xs = case xs of
   ; Cons y ys -> Cons (f y) (map f ys) };
 
 append xs zs = case xs of
-  { Nil -> Nil
+  { Nil -> zs
   ; Cons y ys -> Cons y (append ys zs) };
 
 concatMap f xs = case xs of
@@ -34,16 +33,14 @@ perm ys = case ys of
   { Nil -> Cons Nil Nil
   ; Cons x xs -> concatMap (place x) (perm xs) };
 
+permSort xs = head (filter ord (perm xs));
+
 ord xs = case xs of
  { Nil -> True
  ; Cons x ys -> case ys of 
      { Nil -> True
-     ; Cons y ys -> and (x <= y) (ord (Cons y ys)) } };
+     ; Cons y zs -> and (x <= y) (ord (Cons y zs)) } };
 
-permSort xs = head (filter ord (perm xs));
-
-main = head (permSort (Cons 10 (Cons 9 (Cons 8 (Cons 7
-                      (Cons 6 (Cons 5 (Cons 4
-                      (Cons 3 (Cons 2 (Cons 1 Nil)))))))))))
+main = head (permSort (Cons 10 (Cons 5 (Cons 8 (Cons 7 Nil)))))
 
 }
