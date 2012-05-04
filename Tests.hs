@@ -111,7 +111,7 @@ Cont _ <| _      = True
 Halt v <| Halt w = v == w
 Halt v <| _      = False
 
-benchmarks = ["Benchmarks/Fib.hs"]
+benchmarks = ["Benchmarks/Fib.hs" {-, "Benchmarks/Queens.hs" -}]
 
 main = do
   putStrLn "Testing generated programs:"

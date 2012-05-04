@@ -103,7 +103,8 @@ Store this mapping of state to index.
 > scAddPromise s = do
 >   scpSt <- get
 >   let i = scThisPromise scpSt
->   put $ scpSt { scPromises = scPromises scpSt ++ [(i, s)] }
+>   traceM $ " " ++ show (gc s)
+>   put $ scpSt { scPromises = scPromises scpSt ++ [(i, gc s)] }
 
 > scAddDefinition :: Ix -> [HP] -> Expr () HP -> ScpM ()
 > scAddDefinition f vs x = do
@@ -161,12 +162,12 @@ When driving terminates, the result is `tie`d.
 > drive hist p s = return (() :> Con "<BINGO>" []) `consumeFuel` memo (drive' hist p) s
 > 
 > drive' :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> drive' hist p s = traceM (show s) >> case normalise p s of
+> drive' hist p s = case normalise p s of
 >   Cont s' -> case terminate hist (summarise s') of
->     Stop           -> traceM (show s') >> traceM "Stop" >> tie p s'
+>     Stop           -> memo (tie p) s'
 >     Continue hist' -> drive hist' p s'
->   Halt s' -> traceM (show s') >> traceM "Halt" >> tie p s'
->   Crash   -> traceM (show s) >> traceM "Crash" >> tie p s
+>   Halt s' -> tie p s'
+>   Crash   -> tie p s
 
 In this case, we terminate when the bag of tags contained in a state
 grows. We `summarise` a state into a bag of tags.
@@ -186,16 +187,16 @@ have, we fold back on that definition.
 >      -> State Nat -> ScpM (Expr () HP)
 > memo cont s = do
 >   scpSt <- get
->   let s_dt = deTagSt s
+>   let s_dt = gc $ deTagSt s
 >   let matches = [ (i_prev, prevToCur, s')
 >                 | (i_prev, s') <- scPromises scpSt
 >                 , Just prevToCur <- [s' `equivalent` s_dt] ]
 >   case matches of
 >     []                  -> scAddPromise s_dt >> cont s
 >     (i_prev, prevToCur, s'):_ -> do
->       traceM $ "Tied:"
->       traceM $ show s
->       traceM $ show s'
+>       traceM $ " Tied:"
+>       traceM $ "  p: " ++ show s
+>       traceM $ "  c: " ++ show s'
 >       fvs_prev <- scPerhapsFreevars i_prev $ map fst prevToCur
 >       let x_cur = wrapNull
 >                   (() :> Fun (toFunId i_prev) (mkArgs prevToCur fvs_prev))
@@ -228,6 +229,7 @@ Otherwise, return a pointer to it.
 
 > tie :: Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > tie p s = do
+>   -- scAddPromise $ deTagSt $ s
 >   let br@(B hls ctx) = split s
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
