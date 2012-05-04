@@ -1,5 +1,6 @@
 language: haskell
 install:
+  - cabal update
   - cabal install wl-pprint
   - cabal configure -O2
   - cabal build
