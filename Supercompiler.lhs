@@ -26,6 +26,7 @@ free variables and used function names.
 
 > import Data.Map (Map)
 > import qualified Data.Map as Map
+> import qualified Data.IntMap as IntMap
 > import Data.Maybe
 > import qualified Data.Set as Set
 
@@ -171,7 +172,7 @@ In this case, we terminate when the bag of tags contained in a state
 grows. We `summarise` a state into a bag of tags.
 
 > summarise :: State Nat -> TagBag
-> summarise s = Map.unionsWith (+) $ 
+> summarise s = IntMap.unionsWith (+) $ 
 >               exTag (focus s) : (map (fmap (* 3) . exTag) . 
 >                                  catMaybes . Map.elems . heap) s
 

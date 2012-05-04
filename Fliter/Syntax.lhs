@@ -22,6 +22,8 @@ Imports
 > import Data.List
 > import Data.Map (Map)
 > import qualified Data.Map as Map
+> import Data.IntMap (IntMap)
+> import qualified Data.IntMap as IntMap
 > import Data.Maybe (isJust, fromJust, fromMaybe)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -309,8 +311,8 @@ Replace tags with unique integer.
 
 Extract a dictionary counting each tag.
 
-> exTag :: Ord a => Expr a b -> Map a Int
-> exTag x = foldr (flip (Map.insertWith (+)) 0) Map.empty 
+> exTag :: Expr Int b -> IntMap Int
+> exTag x = foldr (flip (IntMap.insertWith (+)) 0) IntMap.empty 
 >           $ execWriter (reTag (\t -> tell (t:)) x) []
 
 Simple inline

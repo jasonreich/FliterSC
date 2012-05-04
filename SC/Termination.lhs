@@ -1,11 +1,10 @@
 > module SC.Termination where
 > 
-> import Data.Map (Map)
-> import qualified Data.Map as Map
+> import Data.IntMap (IntMap)
+> import qualified Data.IntMap as Map
 > 
 > type Nat = Int
-> 
-> type TagBag = Map Nat Int
+> type TagBag = IntMap Int
 > 
 > type History = [TagBag]
 > 
