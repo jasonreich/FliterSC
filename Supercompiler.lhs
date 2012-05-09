@@ -57,8 +57,8 @@ Debugging stuff
 > import Debug.Trace
 
 > traceM :: Monad m => String -> m ()
-> -- traceM = flip trace $ return ()
-> traceM = const $ return ()
+> traceM = flip trace $ return ()
+> -- traceM = const $ return ()
 
 Global supercompilation state
 -----------------------------
@@ -133,7 +133,7 @@ The supercompiler process;
 5.  Reconstruct a program using the residual definitions.
 
 > sc :: Prog t HP -> (Id, Func t' HP) -> Prog () HP
-> sc p (fid, Lam novs x) = removeLets $ onlyReachable $ nonRecInline p'
+> sc p (fid, Lam novs x) = {- removeLets $ -} onlyReachable {- $ nonRecInline -} p'
 >   where p0 = intTagProg $ p
 >         Prog fs = deTagProg $ p
 >         vs = map HP [0 .. novs - 1]
@@ -192,7 +192,7 @@ have, we fold back on that definition.
 >   let matches = [ (i_prev, prevToCur, free, s')
 >                 | (i_prev, s') <- scPromises scpSt
 >                 , Just (prevToCur, free) <- [s' `instantiatesTo` s_dt] ]
->   case [ m | m@(_, _, _, s') <- matches, isJust (s' `equivalent` s_dt) ] ++ matches of
+>   case matches of
 >     []                             -> scAddPromise s_dt >> cont s
 >     (i_prev, prevToCur, free, s'):_ -> do
 >       traceM $ " Tied:"
@@ -243,8 +243,3 @@ Otherwise, return a pointer to it.
 
 [fliter]:  https://github.com/jasonreich/FliterSemantics
 [bol2010]: http://dx.doi.org/10.1145/1863523.1863540
-
-Tested 310003 programs of which 43887 strictly improved performance.
-
-Testing constructed programs:
-Tested 1 programs of which 0 strictly improved performance.
