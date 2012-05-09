@@ -57,8 +57,8 @@ Debugging stuff
 > import Debug.Trace
 
 > traceM :: Monad m => String -> m ()
-> traceM = flip trace $ return ()
-> -- traceM = const $ return ()
+> -- traceM = flip trace $ return ()
+> traceM = const $ return ()
 
 Global supercompilation state
 -----------------------------
@@ -133,7 +133,7 @@ The supercompiler process;
 5.  Reconstruct a program using the residual definitions.
 
 > sc :: Prog t HP -> (Id, Func t' HP) -> Prog () HP
-> sc p (fid, Lam novs x) = {- removeLets $ -} onlyReachable {- $ nonRecInline -} p'
+> sc p (fid, Lam novs x) = removeLets $ onlyReachable $ nonRecInline p'
 >   where p0 = intTagProg $ p
 >         Prog fs = deTagProg $ p
 >         vs = map HP [0 .. novs - 1]
