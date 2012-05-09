@@ -155,7 +155,7 @@ Given an expressions bound at this point with free variables, replace
 them with bound references.
 
 > open :: Eq free => [free] -> Expr () free -> Expr () free
-> open xs = fmap $ abstract rho
+> open xs y = abstract rho <$> y
 >   where rho x = maybe (Fre x) Bnd $ elemIndex x xs
 
 This uses the more generic.
@@ -351,3 +351,24 @@ Inline non-recursive functions.
 >                       return $ mkApp (instantiate rho `fmap` rhs) surplus
 >     aux seen ((_ :> x :@ vs) :@ ws)  = aux seen (x :@ (vs ++ ws))
 >     aux seen x = descend (aux seen) x
+
+Let-removing
+------------
+
+Remove let-bindings that are no longer necessary.
+
+> removeLets :: (Eq a, Ord a, Enum a) => Prog () a -> Prog () a
+> removeLets (Prog fs) = Prog [ (f, Lam ar $ rl ar <$> x) | (f, Lam ar x) <- fs ]
+>   where mkLet [] (() :> y) = y
+>         mkLet xs y = Let xs y
+>         rl ar (Let xs y) = mkLet xs3 y3
+>           where (buffer, vs) = splitAt ar [toEnum 0 ..]
+>                 bs  = zip vs xs
+>                 y1  = close (map fst bs) y
+>                 bs1 = filter ((`Set.member` freeVars y1) . fst) bs
+>                 y2  = close buffer y1
+>                 y3  = open (map fst bs ++ buffer) y2
+>                 xs3 = map snd bs1
+>         rl ar (Case x as) = Case (rl ar <$> x) [ (c, ar') :-> (rl (ar + ar') <$> y)
+>                                                | ((c, ar') :-> y) <- as ]
+>         rl ar x = descend (rl ar) x

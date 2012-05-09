@@ -38,9 +38,9 @@ testSmallProg counters (i, p_) = do
              putStrLn ""
              fail $ "@" ++ show i ++ ": Failed on SC!"
      else if t <| u 
-             then if (n <= m) 
+             then if True -- (n <= m) 
                      then return True 
-                     else do print $ fmap (const ()) p_
+                     else do print $ nonRecInline $ fmap (const ()) p_
                              showExec t
                              putStrLn ""
                              print q
@@ -76,7 +76,7 @@ testBigProg counters filePath = do
              putStrLn ""
              fail $ show filePath ++ ": Failed on SC!"
      else if t <| u 
-             then if (n <= m) 
+             then if True -- (n <= m) 
                      then return True 
                      else do showExec t
                              putStrLn ""

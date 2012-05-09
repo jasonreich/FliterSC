@@ -12,6 +12,7 @@ Nothing too complicated here.
 
 > import Control.Applicative
 > import Data.List
+> import Data.Monoid
 > import Control.Monad
 > import Control.Monad.State hiding (State)
 > import qualified Data.Map as Map
@@ -88,24 +89,27 @@ A state, s, is an instance of another state, t, if;
   
 Returns the list of s heap pointers mapped to free t heap pointers.
 
-> instanceOf :: State () -> State () -> Maybe [(HP, HP)]
-> instanceOf x y = do
->   initMatch <- (++) <$> matchExpr (focus x) (focus y)
->                     <*> matchStk  (stack x) (stack y)
->   let matchPtr (v, w) = do
->         assumed <- (Map.lookup w >=> return . (== v)) <$> get
->         case assumed of
->           Just False -> mzero
->           Just True  -> return []
->           Nothing    -> do
->             modify $ Map.insert w v
->             case ( join $ Map.lookup v (heap x)
->                  , join $ Map.lookup w (heap y)) of
->               (Nothing, Just _)  -> mzero
->               (Just i,  Just j)  -> lift (matchExpr i j) >>= 
->                                     fmap concat . mapM matchPtr
->               (_,       Nothing) -> return [(v, w)]
->   evalStateT (concat <$> mapM matchPtr initMatch) Map.empty
+> instantiatesTo :: State () -> State () -> Maybe ([(HP, HP)], [HP])
+> instantiatesTo x y = do
+>     initMatch <- (++) <$> matchExpr (focus x) (focus y)
+>                       <*> matchStk  (stack x) (stack y)
+>     evalStateT (mconcat <$> mapM matchPtr initMatch) []
+>   where matchPtr :: (HP, HP) -> StateT [(HP, HP)] Maybe ([(HP, HP)], [HP])
+>         matchPtr (v, w) = do
+>           assumptions <- get
+>           let assoc_v = filter ((==) v . fst) $ assumptions
+>           guard $ all ((==) w . snd) $ assoc_v
+>           let assoc_w = filter ((==) w . snd) $ assumptions
+>           guard $ all ((==) v . fst) $ assoc_w
+>           if (not.null) assoc_v
+>              then return ([], [])
+>              else do modify $ nub . ((v,w) :)
+>                      case ( join $ Map.lookup v (heap x)
+>                           , join $ Map.lookup w (heap y)) of
+>                        (Nothing, _)       -> return ([(v, w)], [w])
+>                        (Just i,  Just j)  -> lift (matchExpr i j) >>=
+>                                              fmap mconcat . mapM matchPtr
+>                        (_,       _)       -> mzero
 
 > equivalent :: State () -> State () -> Maybe [(HP, HP)]
 > equivalent x y = do

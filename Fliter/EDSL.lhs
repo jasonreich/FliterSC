@@ -13,7 +13,7 @@
 > mkApp x ys = tag $ x :@ ys
 > mkLet [] y = y
 > mkLet xs y = tag $ Let xs y
-  
+               
 > var  = tag . Var . Fre
 > fun  = tag . flip Fun []
 > con  = tag . flip Con []

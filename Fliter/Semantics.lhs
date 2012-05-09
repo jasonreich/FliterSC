@@ -4,7 +4,7 @@ FliterSC: Semantics
 This module defines an abstract machine for evaluating f-liter
 programs.
 
-> {-# LANGUAGE DeriveFunctor #-}
+> {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving #-}
 > module Fliter.Semantics where
 
 Imports
@@ -36,7 +36,7 @@ Abstract machine state
 Heap pointers are tagged integers.
 
 > newtype HP = HP { unHP :: Int }
->            deriving (Eq, Ord)
+>            deriving (Eq, Ord, Enum)
 >                     
 > instance Show HP where show = show . unHP
 

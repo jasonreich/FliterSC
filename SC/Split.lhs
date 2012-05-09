@@ -54,6 +54,9 @@ Compress lets where the new binding is not free in the others.
 >                | otherwise = Fre v'
 > mkLet (v, x) y = () :> Let [x] (open [v] y)
 
+> mkApp x [] = x
+> mkApp x vs = () :> (x :@ vs)
+
 > wipe :: HP -> State t -> State t
 > wipe v s = s { heap = Map.insert v Nothing (heap s) }
 
@@ -143,7 +146,7 @@ If there was an application, reapply and store the list of applied
 bindings. Continue down stack.
 
 > splitStack upds (App vs : stk) x h
->   = (vs ++ apps, B hls $ \es -> () :> ctx es :@ map Fre vs)
+>   = (vs ++ apps, B hls $ \es -> (ctx es `mkApp` map Fre vs))
 >   where (apps, B hls ctx) = splitStack [] stk x h
 
 On a left-half primitive application, do equivalent to the above but

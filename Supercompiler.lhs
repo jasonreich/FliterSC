@@ -48,7 +48,7 @@ These expose an embedding of F-liter for inputting programs and an
 example program described in this way.
 
 > import Example
-> import Fliter.EDSL
+> import Fliter.EDSL hiding (mkLet)
 > import Fliter.Parser (parseProg, parseProgs)
 
 Debugging stuff
@@ -93,6 +93,7 @@ the canonical free variables for this resudual index.
 > scPerhapsFreevars :: Ix -> [HP] -> ScpM [HP]
 > scPerhapsFreevars i fvs = do
 >   scpSt <- get
+>   traceM $ "  " ++ toFunId i ++ ": Free vars = " ++ show fvs
 >   let m = Map.insertWith (flip const) i fvs (scFreeVars scpSt)
 >   put $ scpSt { scFreeVars = m }
 >   return (m Map.! i)
@@ -132,7 +133,7 @@ The supercompiler process;
 5.  Reconstruct a program using the residual definitions.
 
 > sc :: Prog t HP -> (Id, Func t' HP) -> Prog () HP
-> sc p (fid, Lam novs x) = onlyReachable $ nonRecInline p'
+> sc p (fid, Lam novs x) = removeLets $ onlyReachable $ nonRecInline p'
 >   where p0 = intTagProg $ p
 >         Prog fs = deTagProg $ p
 >         vs = map HP [0 .. novs - 1]
@@ -159,12 +160,12 @@ fold back on any previously seen states.
 When driving terminates, the result is `tie`d.
 
 > drive :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> drive hist p s = return (() :> Con "<BINGO>" []) `consumeFuel` memo (drive' hist p) s
+> drive hist p s = return (() :> Con "<BINGO>" []) `consumeFuel` memo p (drive' hist p) s
 > 
 > drive' :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > drive' hist p s = case normalise p s of
 >   Cont s' -> case terminate hist (summarise s') of
->     Stop           -> memo (tie p) s'
+>     Stop           -> tie p s'
 >     Continue hist' -> drive hist' p s'
 >   Halt s' -> tie p s'
 >   Crash   -> tie p s
@@ -183,33 +184,37 @@ Memoiser
 The `memo`iser checks to see if we've done this work before. If we
 have, we fold back on that definition.
 
-> memo :: (State Nat -> ScpM (Expr () HP)) 
+> memo :: Prog Nat HP -> (State Nat -> ScpM (Expr () HP)) 
 >      -> State Nat -> ScpM (Expr () HP)
-> memo cont s = do
+> memo p cont s = do
 >   scpSt <- get
 >   let s_dt = gc $ deTagSt s
->   let matches = [ (i_prev, prevToCur, s')
+>   let matches = [ (i_prev, prevToCur, free, s')
 >                 | (i_prev, s') <- scPromises scpSt
->                 , Just prevToCur <- [s' `equivalent` s_dt] ]
->   case matches of
->     []                  -> scAddPromise s_dt >> cont s
->     (i_prev, prevToCur, s'):_ -> do
+>                 , Just (prevToCur, free) <- [s' `instantiatesTo` s_dt] ]
+>   case [ m | m@(_, _, _, s') <- matches, isJust (s' `equivalent` s_dt) ] ++ matches of
+>     []                             -> scAddPromise s_dt >> cont s
+>     (i_prev, prevToCur, free, s'):_ -> do
 >       traceM $ " Tied:"
->       traceM $ "  p: " ++ show s
->       traceM $ "  c: " ++ show s'
+>       traceM $ "  " ++ show i_prev ++ ": " ++ show s'
+>       traceM $ "  c: " ++ show s
+>       traceM $ "  *: " ++ unwords (map show free)
 >       fvs_prev <- scPerhapsFreevars i_prev $ map fst prevToCur
->       let x_cur = wrapNull
->                   (() :> Fun (toFunId i_prev) (mkArgs prevToCur fvs_prev))
+>       let x_cur = (() :> Fun (toFunId i_prev) (mkArgs prevToCur fvs_prev))
+>       let br_cur = splitHeap (heap s) (free, B [] $ \xs -> wrapNull $ mkLets (zip free xs) x_cur)
 >       let i_cur = scThisPromise scpSt
->       fvs_cur <- scPerhapsFreevars i_cur $ map snd prevToCur
->       scAddDefinition i_cur fvs_cur x_cur
->       return $ x_cur
+>       rhs_cur <- fmap (context br_cur) $ mapM (bypass scInc >=> drive [] p) (holes br_cur)
+>       fvs_cur <- scPerhapsFreevars i_cur $ Set.toList $ freeVars rhs_cur
+>       scAddDefinition i_cur fvs_cur rhs_cur
+>       return $ rhs_cur
 
 Produce arguments for given mappings and bindings.
 
 > mkArgs :: [(HP, HP)] -> [HP] -> [HP]
 > mkArgs prevToCur vs = [ fromMaybe (HP (-1)) (lookup v prevToCur)
 >                       | v <- vs ]
+
+> mkLets xs y = foldr mkLet y xs
 
 > wrapNull x | noMissing = x
 >            | otherwise = () :> Let [() :> Con "Null" []] (open [HP $ (-1)] x)
@@ -229,7 +234,6 @@ Otherwise, return a pointer to it.
 
 > tie :: Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > tie p s = do
->   -- scAddPromise $ deTagSt $ s
 >   let br@(B hls ctx) = split s
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
@@ -239,3 +243,8 @@ Otherwise, return a pointer to it.
 
 [fliter]:  https://github.com/jasonreich/FliterSemantics
 [bol2010]: http://dx.doi.org/10.1145/1863523.1863540
+
+Tested 310003 programs of which 43887 strictly improved performance.
+
+Testing constructed programs:
+Tested 1 programs of which 0 strictly improved performance.
