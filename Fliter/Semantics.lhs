@@ -10,11 +10,12 @@ programs.
 Imports
 -------
 
-> import Control.Arrow (first, second)
+> import Control.Arrow (first, second, (***))
 > import Control.Monad
+> import Data.List
 > import Data.Map (Map)
 > import qualified Data.Map as Map
-> import Data.Maybe (listToMaybe, isNothing)
+> import Data.Maybe (listToMaybe, isNothing, fromJust)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -292,3 +293,31 @@ Detag a state.
 >                           (deTag fcs) 
 >                           (map deTagSE stk)
 
+Reverse execution
+-----------------
+
+Back-step
+
+> backstep :: State () -> Either (Heap (), Expr () HP) (State ())
+> backstep st | (null.stack) st = Left (heap st, focus st)
+>             | otherwise = case (head.stack) st of
+>  App vs  -> Right $ st { stack = (tail.stack) st
+>                        , focus = () :> (focus st :@ map Fre vs) }
+>  Upd v   -> Right $ st { stack = (tail.stack) st
+>                        , heap = Map.insert v (Just $ focus st) (heap st) }
+>  Cas as  -> Right $ st { stack = (tail.stack) st
+>                        , focus = () :> Case (focus st) as }
+>  PrL o v -> Right $ st { stack = (tail.stack) st
+>                        , focus = () :> Let [focus st] 
+>                                    (() :> POp o (Fre v) (Bnd 0)) }
+>  PrR o m -> Right $ st { stack = (tail.stack) st
+>                        , focus = () :> Let [() :> PVa m, focus st] 
+>                                     (() :> POp o (Bnd 0) (Bnd 1)) }
+
+> -- backstepHeap :: (Heap (), Expr () HP) -> Func () HP
+> backstepHeap (h, y) = {- Lam (length free) $ open free -} result
+>   where (free, bound) = (map fst) *** (map $ second fromJust)
+>                       $ partition (isNothing . snd) $ Map.assocs h
+>         result = foldr (\(v, x) y -> () :> Let [x] (open [v] y)) y bound
+
+> reconstruct = either backstepHeap reconstruct . backstep

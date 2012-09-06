@@ -57,7 +57,7 @@ Debugging stuff
 > import Debug.Trace
 
 > traceM :: Monad m => String -> m ()
-> -- traceM = flip trace $ return ()
+> -- traceM str = trace (unwords . lines $ str) $ return ()
 > traceM = const $ return ()
 
 Global supercompilation state
@@ -165,10 +165,15 @@ When driving terminates, the result is `tie`d.
 > drive' :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
 > drive' hist p s = case normalise p s of
 >   Cont s' -> case terminate hist (summarise s') of
->     Stop           -> tie p s'
+>     Stop           -> tie hist p s'
 >     Continue hist' -> drive hist' p s'
->   Halt s' -> tie p s'
->   Crash   -> tie p s
+>   Halt s' -> tie hist p s'
+>   Crash   -> tie hist p s
+
+> preDrive :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
+> preDrive hist p s = case terminate hist (summarise s) of
+>     Stop           -> tie hist p s
+>     Continue hist' -> drive hist' p s
 
 In this case, we terminate when the bag of tags contained in a state
 grows. We `summarise` a state into a bag of tags.
@@ -232,14 +237,20 @@ for further driving, then reconstruct the expression and store.
 If it's simple and non-recursive, just return the residual expression.
 Otherwise, return a pointer to it.
 
-> tie :: Prog Nat HP -> State Nat -> ScpM (Expr () HP)
-> tie p s = do
+> tie :: History -> Prog Nat HP -> State Nat -> ScpM (Expr () HP)
+> tie hist p s = do
 >   let br@(B hls ctx) = split s
 >   i <- fmap scThisPromise get
 >   fvs <- scPerhapsFreevars i $ unknownVarsSt s
->   rhs <- fmap ctx $ mapM (bypass scInc >=> drive [] p) hls
+>   rhs <- fmap ctx $ mapM (bypass scInc >=> preDrive hist p) hls
 >   scAddDefinition i fvs rhs
 >   return $ () :> Fun (toFunId i) fvs
 
 [fliter]:  https://github.com/jasonreich/FliterSemantics
 [bol2010]: http://dx.doi.org/10.1145/1863523.1863540
+
+> e :: Expr () String -> Expr () HP
+> e = fmap $ fmap $ HP . read
+
+> a :: Alte () String -> Alte () HP
+> a = fmap $ HP . read

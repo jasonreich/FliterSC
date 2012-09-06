@@ -315,6 +315,10 @@ Extract a dictionary counting each tag.
 > exTag x = foldr (flip (IntMap.insertWith (+)) 0) IntMap.empty 
 >           $ execWriter (reTag (\t -> tell (t:)) x) []
 
+> exTagSet :: Ord t => Expr t b -> Set t
+> exTagSet x = foldr Set.insert Set.empty 
+>           $ execWriter (reTag (\t -> tell (t:)) x) []
+
 Simple inline
 -------------
 

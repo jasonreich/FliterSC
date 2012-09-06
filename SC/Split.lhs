@@ -21,6 +21,7 @@ for more info about any of these.
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
+> import Fliter.FixSet
 > import Fliter.Semantics
 > import Fliter.Syntax
 
@@ -198,3 +199,42 @@ e.g.
 >                                 then mkLet (v, x) y
 >                                 else y
 >           return $ B hls' ctx'
+
+Safe split
+----------
+
+Reachable tag set must be decreasing?
+
+> funRefsSE :: StackElem t -> Set Id
+> funRefsSE (Cas as)  = Set.unions [ funRefs y | (_ :-> y) <- as ]
+> funRefsSE _         = Set.empty
+
+> funRefsStk :: Stack t -> Set Id
+> funRefsStk = Set.unions . map funRefsSE
+
+> funRefsState :: Prog t a -> State t -> Set Id
+> funRefsState (Prog fs) st = fixSet aux (funRefs (focus st) `Set.union` 
+>                                         funRefsStk (stack st) `Set.union`
+>                                         Set.unions (map aux' $ Map.elems $ heap st))
+>   where aux f = maybe Set.empty (\(Lam _ x) -> funRefs x) (lookup f fs)
+>         aux' = maybe Set.empty funRefs
+
+> exAllTags :: Ord t => Prog t a -> State t -> Set t
+> exAllTags (Prog prog) st = Set.unions $ exTagsSt st : 
+>                            [ maybe Set.empty (\(Lam _ x) -> exTagSet x) (lookup f prog) | f <- fs ]
+>   where fs = Set.toList $ funRefsState (Prog prog) st
+>         
+
+> exTagsSt :: Ord t => State t -> Set t
+> exTagsSt s = Set.unions $ exTagSet (focus s) : (map exTagSet . catMaybes . Map.elems . heap) s
+
+> smallerThan :: Ord t => Prog t a -> State t -> State t -> Bool
+> smallerThan prog st st' = Set.size (exAllTags prog st) <= Set.size (exAllTags prog st')
+
+> safeSplit :: Ord t => Prog t a -> State t -> Bracket t
+> safeSplit prog st = uncurry B $ foldr aux ([], ctx) hls
+>   where B hls ctx = split st
+>         aux st' (hls, ctx)
+>           | smallerThan prog st' st = (gc st':hls, ctx)
+>           | otherwise = let B hls' ctx' = safeSplit prog st'
+>                         in (hls' ++ hls, ctx . uncurry (:) . first ctx' . splitAt (length hls'))
